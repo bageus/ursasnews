@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ursas News — Internal Tool (MVP)</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <h1>Ursas News — Internal MVP</h1>
+      <p>Каркас админ-панели: старт с фазы 2 (генерация ролика), новости пока вручную.</p>
+    </header>
+
+    <nav class="tabs" aria-label="Основные вкладки">
+      <button class="tab is-active" data-tab="news">Лента (ручной отбор)</button>
+      <button class="tab" data-tab="video">Генерация ролика (Фаза 2)</button>
+      <button class="tab" data-tab="rubrics">Рубрики</button>
+      <button class="tab" data-tab="settings">Настройки</button>
+    </nav>
+
+    <main class="container">
+      <section class="panel is-active" id="news">
+        <h2>Лента новостей — отладочный режим</h2>
+        <p>На первом этапе новости добавляются вручную, без RSS/парсеров.</p>
+
+        <form id="manual-news-form" class="card form-grid">
+          <label>
+            Заголовок
+            <input type="text" id="news-title" required />
+          </label>
+          <label>
+            Краткое описание
+            <textarea id="news-summary" rows="3" required></textarea>
+          </label>
+          <label>
+            Источник
+            <input type="text" id="news-source" placeholder="manual" value="manual" />
+          </label>
+          <label>
+            Маркер
+            <select id="news-tag">
+              <option>рынок</option>
+              <option>крипта</option>
+              <option>акции</option>
+              <option>ursas ecosystem</option>
+              <option>bear-world</option>
+            </select>
+          </label>
+          <button type="submit">Добавить новость</button>
+        </form>
+
+        <div class="card">
+          <h3>Очередь новостей в выпуск</h3>
+          <ul id="news-list" class="list"></ul>
+        </div>
+      </section>
+
+      <section class="panel" id="video">
+        <h2>Генерация ролика (MVP)</h2>
+        <p>Фокус на фазе 2: редактируем сценарий и формируем payload для рендера.</p>
+
+        <div class="grid-2">
+          <form id="script-form" class="card form-grid">
+            <label>
+              Название выпуска
+              <input type="text" id="episode-title" value="Ursas Daily" />
+            </label>
+            <label>
+              Формат
+              <select id="episode-format">
+                <option value="1080x1920">1080x1920 (vertical)</option>
+                <option value="1920x1080">1920x1080 (horizontal)</option>
+                <option value="1080x1080">1080x1080 (square)</option>
+              </select>
+            </label>
+            <label>
+              FPS
+              <input type="number" id="episode-fps" min="24" max="60" value="30" />
+            </label>
+            <label>
+              Субтитры
+              <select id="episode-subtitles">
+                <option value="true">включены</option>
+                <option value="false">выключены</option>
+              </select>
+            </label>
+            <label>
+              Интро
+              <textarea id="intro-text" rows="2">Всем привет, с вами Ursas News.</textarea>
+            </label>
+            <label>
+              Аутро
+              <textarea id="outro-text" rows="2">Подписывайтесь на Ursas News.</textarea>
+            </label>
+            <div class="row-actions">
+              <button type="button" id="build-script">Собрать сценарий</button>
+              <button type="button" id="preview-render">Preview</button>
+              <button type="button" id="final-render">Final Render</button>
+            </div>
+          </form>
+
+          <div class="card">
+            <h3>JSON сценарий / payload</h3>
+            <pre id="script-output">Нажмите «Собрать сценарий»</pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" id="rubrics">
+        <h2>Рубрики (заглушка MVP)</h2>
+        <div class="grid-2">
+          <div class="card">
+            <h3>Ursas Index</h3>
+            <p id="ursas-index">42</p>
+          </div>
+          <div class="card">
+            <h3>Число дня</h3>
+            <p id="number-of-day">7</p>
+          </div>
+          <div class="card">
+            <h3>Top-10 падающих</h3>
+            <p>Заглушка: данные будут подставляться позже.</p>
+          </div>
+          <div class="card">
+            <h3>Bear-world fallback</h3>
+            <p>Логика без повторов будет реализована в следующих итерациях.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" id="settings">
+        <h2>Настройки</h2>
+        <div class="card form-grid">
+          <label>
+            Render API URL
+            <input type="url" placeholder="http://localhost:8080/render" />
+          </label>
+          <label>
+            Профиль голоса
+            <input type="text" value="ursas_roar_v1" />
+          </label>
+          <p class="hint">Секция для будущей интеграции backend и voice/render workers.</p>
+        </div>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
