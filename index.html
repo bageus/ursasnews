@@ -68,36 +68,41 @@
             <img src="public/base scene/board-news.webp" alt="Доска новостей" class="scene-layer" />
             <img src="public/base scene/body-shirt.webp" alt="Тело ведущего в рубашке" class="scene-layer" />
             <img src="public/base scene/head-base.webp" alt="Голова ведущего" class="scene-layer" />
-            <img id="mouth-layer" src="" alt="Анимация рта ведущего" class="scene-layer scene-mouth" />
+            <div id="mouth-layer" class="scene-mouth-sprite" aria-label="Анимация рта ведущего"></div>
             <img src="public/base scene/arm-base.webp" alt="Базовая рука ведущего" class="scene-layer" />
           </div>
           <div class="card mouth-card">
             <h4>Анимация рта (lip-sync)</h4>
-            <p class="hint">Это не атлас: каждый кадр — отдельный PNG/WebP такого же размера, как сцена, с прозрачным фоном и ртом в фиксированной позиции.</p>
+            <p class="hint">Используются 2 спрайт-листа 100x100: закрытый рот (10 кадров) и открытый (8 кадров). Кадры выбираются случайно по правилам текста.</p>
             <div class="mouth-grid">
               <label>
-                Путь к кадрам
-                <input type="text" id="mouth-path" value="public/base scene/mouth/mouth-{frame}.webp" />
+                Текст чтения
+                <textarea id="speech-text" rows="4" placeholder="Введите текст, который читает персонаж..."></textarea>
               </label>
+              <div class="counter-box">
+                <p>Символов: <strong id="speech-char-count">0</strong></p>
+                <p>Слов: <strong id="speech-word-count">0</strong></p>
+              </div>
+            </div>
+            <div class="mouth-grid">
               <label>
-                Первый кадр
-                <input type="number" id="mouth-start" min="0" value="1" />
+                Режим скорости
+                <select id="speech-mode">
+                  <option value="duration">Прочитать за время</option>
+                  <option value="wpm">Скорость слов/мин</option>
+                </select>
               </label>
-              <label>
-                Последний кадр
-                <input type="number" id="mouth-end" min="0" value="100" />
+              <label id="duration-field">
+                Длительность чтения (сек)
+                <input type="number" id="speech-duration" min="1" value="10" />
               </label>
-              <label>
-                Padding
-                <input type="number" id="mouth-pad" min="1" max="6" value="4" />
-              </label>
-              <label>
-                FPS рта
-                <input type="number" id="mouth-fps" min="1" max="30" value="12" />
+              <label id="wpm-field" class="is-hidden">
+                Скорость (слов в минуту)
+                <input type="number" id="speech-wpm" min="60" max="320" value="150" />
               </label>
             </div>
             <div class="row-actions">
-              <button type="button" id="mouth-preview">Preview рот</button>
+              <button type="button" id="mouth-preview">Preview речи</button>
               <button type="button" id="mouth-stop">Stop</button>
             </div>
           </div>

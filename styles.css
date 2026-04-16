@@ -154,6 +154,19 @@ button:hover {
   z-index: 5;
 }
 
+.scene-mouth-sprite {
+  position: absolute;
+  z-index: 5;
+  width: 100px;
+  height: 100px;
+  left: 50%;
+  top: 49%;
+  transform: translate(-50%, -50%);
+  background-repeat: no-repeat;
+  image-rendering: auto;
+  pointer-events: none;
+}
+
 .mouth-card {
   margin-top: 12px;
 }
@@ -165,6 +178,29 @@ button:hover {
   margin-top: 10px;
 }
 
+<<<<<<< codex/build-scene-layers-for-role-generation-w9kf2j
+.counter-box {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  background: #0f1530;
+}
+
+.counter-box p {
+  margin: 0 0 6px;
+  color: var(--muted);
+}
+
+.counter-box p:last-child {
+  margin-bottom: 0;
+}
+
+.is-hidden {
+  display: none !important;
+}
+
+=======
+>>>>>>> main
 .row-actions {
   display: flex;
   gap: 8px;
