@@ -59,6 +59,54 @@
       <section class="panel" id="video">
         <h2>Генерация ролика (MVP)</h2>
         <p>Фокус на фазе 2: редактируем сценарий и формируем payload для рендера.</p>
+        <div class="card">
+          <h3>Сцена (последовательность слоев)</h3>
+          <p class="hint">Слои собраны в порядке от фона к переднему плану.</p>
+          <div class="scene-stage" aria-label="Превью сцены для генерации ролика">
+            <img src="public/base scene/backwall.webp" alt="Задняя стена сцены" class="scene-layer" />
+            <img src="public/base scene/table.webp" alt="Стол сцены" class="scene-layer" />
+            <img src="public/base scene/board-news.webp" alt="Доска новостей" class="scene-layer" />
+            <img src="public/base scene/body-shirt.webp" alt="Тело ведущего в рубашке" class="scene-layer" />
+            <img src="public/base scene/head-base.webp" alt="Голова ведущего" class="scene-layer" />
+            <div id="mouth-layer" class="scene-mouth-sprite" aria-label="Анимация рта ведущего"></div>
+            <img src="public/base scene/arm-base.webp" alt="Базовая рука ведущего" class="scene-layer" />
+          </div>
+          <div class="card mouth-card">
+            <h4>Анимация рта (lip-sync)</h4>
+            <p class="hint">Используются 2 спрайт-листа 100x100: закрытый рот (10 кадров) и открытый (8 кадров). Кадры выбираются случайно по правилам текста.</p>
+            <div class="mouth-grid">
+              <label>
+                Текст чтения
+                <textarea id="speech-text" rows="4" placeholder="Введите текст, который читает персонаж..."></textarea>
+              </label>
+              <div class="counter-box">
+                <p>Символов: <strong id="speech-char-count">0</strong></p>
+                <p>Слов: <strong id="speech-word-count">0</strong></p>
+              </div>
+            </div>
+            <div class="mouth-grid">
+              <label>
+                Режим скорости
+                <select id="speech-mode">
+                  <option value="duration">Прочитать за время</option>
+                  <option value="wpm">Скорость слов/мин</option>
+                </select>
+              </label>
+              <label id="duration-field">
+                Длительность чтения (сек)
+                <input type="number" id="speech-duration" min="1" value="10" />
+              </label>
+              <label id="wpm-field" class="is-hidden">
+                Скорость (слов в минуту)
+                <input type="number" id="speech-wpm" min="60" max="320" value="150" />
+              </label>
+            </div>
+            <div class="row-actions">
+              <button type="button" id="mouth-preview">Preview речи</button>
+              <button type="button" id="mouth-stop">Stop</button>
+            </div>
+          </div>
+        </div>
 
         <div class="grid-2">
           <form id="script-form" class="card form-grid">
