@@ -68,7 +68,38 @@
             <img src="public/base scene/board-news.webp" alt="Доска новостей" class="scene-layer" />
             <img src="public/base scene/body-shirt.webp" alt="Тело ведущего в рубашке" class="scene-layer" />
             <img src="public/base scene/head-base.webp" alt="Голова ведущего" class="scene-layer" />
+            <img id="mouth-layer" src="" alt="Анимация рта ведущего" class="scene-layer scene-mouth" />
             <img src="public/base scene/arm-base.webp" alt="Базовая рука ведущего" class="scene-layer" />
+          </div>
+          <div class="card mouth-card">
+            <h4>Анимация рта (lip-sync)</h4>
+            <p class="hint">Это не атлас: каждый кадр — отдельный PNG/WebP такого же размера, как сцена, с прозрачным фоном и ртом в фиксированной позиции.</p>
+            <div class="mouth-grid">
+              <label>
+                Путь к кадрам
+                <input type="text" id="mouth-path" value="public/base scene/mouth/mouth-{frame}.webp" />
+              </label>
+              <label>
+                Первый кадр
+                <input type="number" id="mouth-start" min="0" value="1" />
+              </label>
+              <label>
+                Последний кадр
+                <input type="number" id="mouth-end" min="0" value="100" />
+              </label>
+              <label>
+                Padding
+                <input type="number" id="mouth-pad" min="1" max="6" value="4" />
+              </label>
+              <label>
+                FPS рта
+                <input type="number" id="mouth-fps" min="1" max="30" value="12" />
+              </label>
+            </div>
+            <div class="row-actions">
+              <button type="button" id="mouth-preview">Preview рот</button>
+              <button type="button" id="mouth-stop">Stop</button>
+            </div>
           </div>
         </div>
 

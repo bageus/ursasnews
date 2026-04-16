@@ -150,6 +150,21 @@ button:hover {
   pointer-events: none;
 }
 
+.scene-mouth {
+  z-index: 5;
+}
+
+.mouth-card {
+  margin-top: 12px;
+}
+
+.mouth-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
 .row-actions {
   display: flex;
   gap: 8px;
