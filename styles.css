@@ -184,6 +184,27 @@ button:hover {
   pointer-events: none;
 }
 
+.scene-subtitles {
+  position: absolute;
+  left: 50%;
+  top: 70%;
+  width: 74%;
+  transform: translateX(-50%);
+  padding: 6px 8px;
+  border-radius: 6px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.3;
+  color: #ffffff;
+  background: rgba(0, 0, 0, 0.56);
+  display: none;
+  z-index: 7;
+}
+
+.scene-subtitles.is-visible {
+  display: block;
+}
+
 .board-layer {
   position: absolute;
   inset: 0;
