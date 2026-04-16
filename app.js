@@ -16,8 +16,74 @@ tabs.forEach((tab) => {
 const manualNewsForm = document.getElementById('manual-news-form');
 const newsList = document.getElementById('news-list');
 const scriptOutput = document.getElementById('script-output');
+const mouthLayer = document.getElementById('mouth-layer');
+const mouthPathInput = document.getElementById('mouth-path');
+const mouthStartInput = document.getElementById('mouth-start');
+const mouthEndInput = document.getElementById('mouth-end');
+const mouthPadInput = document.getElementById('mouth-pad');
+const mouthFpsInput = document.getElementById('mouth-fps');
+const mouthPreviewButton = document.getElementById('mouth-preview');
+const mouthStopButton = document.getElementById('mouth-stop');
 
 const manualNewsQueue = [];
+let mouthPreviewTimer = null;
+
+function getMouthSequenceConfig() {
+  const pathTemplate = mouthPathInput.value.trim();
+  const startFrame = Number(mouthStartInput.value || 0);
+  const endFrame = Number(mouthEndInput.value || 0);
+  const framePadding = Number(mouthPadInput.value || 4);
+  const fps = Number(mouthFpsInput.value || 12);
+
+  return {
+    path_template: pathTemplate,
+    start_frame: startFrame,
+    end_frame: endFrame,
+    frame_padding: framePadding,
+    fps,
+  };
+}
+
+function buildMouthFrameUrls(config) {
+  const from = Math.min(config.start_frame, config.end_frame);
+  const to = Math.max(config.start_frame, config.end_frame);
+  const frames = [];
+
+  for (let frame = from; frame <= to; frame += 1) {
+    const padded = String(frame).padStart(config.frame_padding, '0');
+    frames.push(config.path_template.replace('{frame}', padded));
+  }
+
+  return frames;
+}
+
+function stopMouthPreview() {
+  if (mouthPreviewTimer) {
+    clearInterval(mouthPreviewTimer);
+    mouthPreviewTimer = null;
+  }
+}
+
+function startMouthPreview() {
+  stopMouthPreview();
+
+  const config = getMouthSequenceConfig();
+  const frameUrls = buildMouthFrameUrls(config);
+
+  if (frameUrls.length === 0 || !config.path_template.includes('{frame}')) {
+    mouthLayer.removeAttribute('src');
+    return;
+  }
+
+  let currentFrame = 0;
+  mouthLayer.src = frameUrls[currentFrame];
+
+  const intervalMs = Math.max(50, Math.round(1000 / Math.max(1, config.fps)));
+  mouthPreviewTimer = setInterval(() => {
+    currentFrame = (currentFrame + 1) % frameUrls.length;
+    mouthLayer.src = frameUrls[currentFrame];
+  }, intervalMs);
+}
 
 manualNewsForm.addEventListener('submit', (event) => {
   event.preventDefault();
@@ -64,11 +130,15 @@ function buildEpisodeScript(mode = 'preview') {
   const subtitles = document.getElementById('episode-subtitles').value === 'true';
   const intro = document.getElementById('intro-text').value.trim();
   const outro = document.getElementById('outro-text').value.trim();
+  const mouthSequence = getMouthSequenceConfig();
 
   const script = {
     episode_title: episodeTitle || 'Ursas Daily',
     render_mode: mode,
     scene_template: 'studio_bear_anchor_v1',
+    scene_animation: {
+      mouth_sequence: mouthSequence,
+    },
     render: { format, fps, subtitles },
     intro,
     segments: manualNewsQueue.map((news, idx) => ({
@@ -101,5 +171,8 @@ document.getElementById('preview-render').addEventListener('click', () => {
 document.getElementById('final-render').addEventListener('click', () => {
   buildEpisodeScript('final');
 });
+
+mouthPreviewButton.addEventListener('click', startMouthPreview);
+mouthStopButton.addEventListener('click', stopMouthPreview);
 
 renderNewsQueue();
