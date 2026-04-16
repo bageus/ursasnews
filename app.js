@@ -35,10 +35,16 @@ const mouthSprites = {
   closed: {
     path: 'public/mounth/рот закрыт нейтральный.webp',
     frames: 10,
+    scale: 0.7,
+    offset_x: 0,
+    offset_y: 2,
   },
   open: {
     path: 'public/mounth/рот улыбка с языком.webp',
     frames: 8,
+    scale: 1,
+    offset_x: 0,
+    offset_y: 0,
   },
 };
 
@@ -58,6 +64,9 @@ function setMouthFrame(type, frameIndex) {
 
   mouthLayer.style.backgroundImage = `url("${sprite.path}")`;
   mouthLayer.style.backgroundPosition = `${-100 * boundedFrame}px 0`;
+  mouthLayer.style.left = `calc(50% + ${sprite.offset_x}px)`;
+  mouthLayer.style.top = `calc(49% + ${sprite.offset_y}px)`;
+  mouthLayer.style.transform = `translate(-50%, -50%) scale(${sprite.scale})`;
 }
 
 function setNeutralMouth() {
