@@ -27,6 +27,10 @@ python3 -m http.server 8080
 
 Затем открыть `http://localhost:8080`.
 
+## Деплой на Vercel
+
+В проект добавлен `vercel.json` с fallback-маршрутом на `index.html`, чтобы корневой URL и клиентские пути не отдавали 404. Статические файлы (включая `public/*`) обслуживаются через `handle: filesystem`.
+
 ## Документация
 
 - `PIPLAN.md` — подробный markdown-план реализации с задачами, путями решения и roadmap.
