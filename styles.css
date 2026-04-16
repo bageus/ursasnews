@@ -225,33 +225,6 @@ button:hover {
   display: block;
 }
 
-.mouth-card {
-  margin-top: 12px;
-}
-
-.mouth-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 10px;
-  margin-top: 10px;
-}
-
-.counter-box {
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 10px;
-  background: #0f1530;
-}
-
-.counter-box p {
-  margin: 0 0 6px;
-  color: var(--muted);
-}
-
-.counter-box p:last-child {
-  margin-bottom: 0;
-}
-
 .is-hidden {
   display: none !important;
 }
@@ -318,6 +291,43 @@ button:hover {
 
 .news-image-preview.is-visible {
   display: block;
+}
+
+.news-item-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.rubrics-block {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #111935;
+}
+
+.selected-rubrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rubric-link {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.rubrics-controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.rubrics-controls select {
+  min-width: 220px;
 }
 
 .row-actions {

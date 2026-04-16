@@ -187,29 +187,6 @@
               </div>
             </div>
             <label>
-              Язык субтитров
-              <select id="subtitle-language">
-                <option value="ru" selected>Русский (ru)</option>
-                <option value="en">English (en)</option>
-                <option value="es">Español (es)</option>
-                <option value="de">Deutsch (de)</option>
-              </select>
-            </label>
-            <label>
-              Шрифт субтитров
-              <input type="text" id="subtitle-font-family" value="Inter" />
-            </label>
-            <label>
-              Жирность субтитров
-              <select id="subtitle-font-weight">
-                <option value="400">400 (Regular)</option>
-                <option value="500">500 (Medium)</option>
-                <option value="600">600 (SemiBold)</option>
-                <option value="700" selected>700 (Bold)</option>
-                <option value="800">800 (ExtraBold)</option>
-              </select>
-            </label>
-            <label>
               Интро
               <textarea id="intro-text" rows="2">Всем привет, с вами Ursas News.</textarea>
             </label>
@@ -219,6 +196,14 @@
                 <button type="button" id="add-news-item">+ Добавить новость</button>
               </div>
               <div id="speech-news-items" class="news-items"></div>
+            </div>
+            <div class="rubrics-block">
+              <strong>Постоянная рубрика</strong>
+              <div id="selected-rubrics" class="selected-rubrics"></div>
+              <div class="rubrics-controls">
+                <select id="rubric-select"></select>
+                <button type="button" id="add-rubric">Добавить рубрику</button>
+              </div>
             </div>
             <label>
               Аутро
@@ -277,6 +262,18 @@
           <div class="card">
             <h3>Bear-world fallback</h3>
             <p>Логика без повторов будет реализована в следующих итерациях.</p>
+          </div>
+          <div class="card">
+            <h3>Язык медведей</h3>
+            <p>Заглушка рубрики.</p>
+          </div>
+          <div class="card">
+            <h3>Roadmap news</h3>
+            <p>Заглушка рубрики.</p>
+          </div>
+          <div class="card">
+            <h3>Ursass Tube leaderboard</h3>
+            <p>Заглушка рубрики.</p>
           </div>
         </div>
       </section>
