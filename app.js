@@ -30,8 +30,6 @@ const speechNewsItems = document.getElementById('speech-news-items');
 const addNewsItemButton = document.getElementById('add-news-item');
 const mouthPreviewButton = document.getElementById('mouth-preview');
 const mouthStopButton = document.getElementById('mouth-stop');
-const boardNewsTitle = document.getElementById('board-news-title');
-const boardNewsImagePreview = document.getElementById('board-news-image-preview');
 const selectedRubrics = document.getElementById('selected-rubrics');
 const rubricSelect = document.getElementById('rubric-select');
 const addRubricButton = document.getElementById('add-rubric');
@@ -151,20 +149,6 @@ function updateNewsItemCounter(textarea, counterElement) {
   counterElement.textContent = `${chars} симв / ${words} слов`;
 }
 
-function updateBoardPreview(row) {
-  const title = row?.querySelector('.speech-news-title')?.value.trim();
-  const imageData = row?.dataset?.imageData || '';
-
-  boardNewsTitle.textContent = title || 'URSAS NEWS';
-  if (imageData) {
-    boardNewsImagePreview.src = imageData;
-    boardNewsImagePreview.classList.add('is-visible');
-  } else {
-    boardNewsImagePreview.removeAttribute('src');
-    boardNewsImagePreview.classList.remove('is-visible');
-  }
-}
-
 function addSpeechNewsItem(initialValue = '') {
   speechNewsIndex += 1;
 
@@ -221,15 +205,12 @@ function addSpeechNewsItem(initialValue = '') {
   deleteButton.type = 'button';
   deleteButton.textContent = '✕ Удалить новость';
 
-  titleInput.addEventListener('input', () => updateBoardPreview(wrapper));
   textarea.addEventListener('input', () => {
     updateNewsItemCounter(textarea, counter);
-    updateBoardPreview(wrapper);
     updateSceneSubtitles();
   });
   linkInput.addEventListener('input', () => {
     linkInput.setCustomValidity(isValidHttpUrl(linkInput.value.trim()) ? '' : 'Введите ссылку http/https');
-    updateBoardPreview(wrapper);
   });
   imageInput.addEventListener('change', () => {
     const [file] = imageInput.files || [];
@@ -237,7 +218,6 @@ function addSpeechNewsItem(initialValue = '') {
       wrapper.dataset.imageData = '';
       imagePreview.removeAttribute('src');
       imagePreview.classList.remove('is-visible');
-      updateBoardPreview(wrapper);
       return;
     }
 
@@ -247,7 +227,6 @@ function addSpeechNewsItem(initialValue = '') {
       wrapper.dataset.imageData = result;
       imagePreview.src = result;
       imagePreview.classList.add('is-visible');
-      updateBoardPreview(wrapper);
     };
     reader.readAsDataURL(file);
   });
@@ -264,7 +243,6 @@ function addSpeechNewsItem(initialValue = '') {
     }
     speechNewsItems.insertBefore(wrapper, prev);
     renumberSpeechNews();
-    updateBoardPreview(wrapper);
   });
 
   moveDownButton.addEventListener('click', () => {
@@ -274,7 +252,6 @@ function addSpeechNewsItem(initialValue = '') {
     }
     speechNewsItems.insertBefore(next, wrapper);
     renumberSpeechNews();
-    updateBoardPreview(wrapper);
   });
 
   deleteButton.addEventListener('click', () => {
@@ -285,12 +262,10 @@ function addSpeechNewsItem(initialValue = '') {
       addSpeechNewsItem();
       return;
     }
-    updateBoardPreview(first);
     updateSceneSubtitles();
   });
 
   renumberSpeechNews();
-  updateBoardPreview(wrapper);
 }
 
 function renumberSpeechNews() {
