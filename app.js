@@ -26,6 +26,8 @@ const speechNewsItems = document.getElementById('speech-news-items');
 const addNewsItemButton = document.getElementById('add-news-item');
 const mouthPreviewButton = document.getElementById('mouth-preview');
 const mouthStopButton = document.getElementById('mouth-stop');
+const boardNewsTitle = document.getElementById('board-news-title');
+const boardNewsImagePreview = document.getElementById('board-news-image-preview');
 
 const manualNewsQueue = [];
 let mouthPreviewTimerIds = [];
@@ -35,7 +37,7 @@ const mouthSprites = {
   idle: {
     path: 'public/mounth/улыбка зубами.webp',
     frames: 6,
-    scale: 0.85,
+    scale: 1,
     offset_x: 5,
     offset_y: -4,
   },
@@ -59,15 +61,25 @@ function getWordsCount(text) {
   return (text.match(/[^\s]+/g) || []).length;
 }
 
-function collectSpeechNewsTexts() {
-  const textareas = speechNewsItems.querySelectorAll('.speech-news-text');
-  return Array.from(textareas)
-    .map((textarea) => textarea.value.trim())
-    .filter(Boolean);
+function collectSpeechNewsItems() {
+  const rows = speechNewsItems.querySelectorAll('.news-item-row');
+  return Array.from(rows)
+    .map((row) => {
+      const title = row.querySelector('.speech-news-title').value.trim();
+      const text = row.querySelector('.speech-news-text').value.trim();
+      const link = row.querySelector('.speech-news-link').value.trim();
+      const image_data = row.dataset.imageData || '';
+
+      return { title, text, link, image_data };
+    })
+    .filter((item) => item.title || item.text || item.link || item.image_data);
 }
 
 function collectSpeechText() {
-  return collectSpeechNewsTexts().join(' ');
+  return collectSpeechNewsItems()
+    .map((item) => item.text)
+    .filter(Boolean)
+    .join(' ');
 }
 
 function updateNewsItemCounter(textarea, counterElement) {
@@ -75,6 +87,20 @@ function updateNewsItemCounter(textarea, counterElement) {
   const chars = text.length;
   const words = getWordsCount(text);
   counterElement.textContent = `${chars} симв / ${words} слов`;
+}
+
+function updateBoardPreview(row) {
+  const title = row?.querySelector('.speech-news-title')?.value.trim();
+  const imageData = row?.dataset?.imageData || '';
+
+  boardNewsTitle.textContent = title || 'URSAS NEWS';
+  if (imageData) {
+    boardNewsImagePreview.src = imageData;
+    boardNewsImagePreview.classList.add('is-visible');
+  } else {
+    boardNewsImagePreview.removeAttribute('src');
+    boardNewsImagePreview.classList.remove('is-visible');
+  }
 }
 
 function addSpeechNewsItem(initialValue = '') {
@@ -87,22 +113,66 @@ function addSpeechNewsItem(initialValue = '') {
   label.className = 'news-item-label';
   label.textContent = `Новость ${speechNewsIndex}`;
 
+  const titleInput = document.createElement('input');
+  titleInput.className = 'speech-news-title';
+  titleInput.type = 'text';
+  titleInput.maxLength = 30;
+  titleInput.placeholder = 'Короткий заголовок (до 30 символов)';
+
   const textarea = document.createElement('textarea');
   textarea.className = 'speech-news-text';
   textarea.rows = 3;
   textarea.placeholder = 'Текст новости для озвучки...';
   textarea.value = initialValue;
 
+  const linkInput = document.createElement('input');
+  linkInput.className = 'speech-news-link';
+  linkInput.type = 'url';
+  linkInput.placeholder = 'Ссылка на новость';
+
+  const imageInput = document.createElement('input');
+  imageInput.className = 'speech-news-image';
+  imageInput.type = 'file';
+  imageInput.accept = 'image/*';
+
+  const imagePreview = document.createElement('img');
+  imagePreview.className = 'news-image-preview';
+  imagePreview.alt = 'Превью изображения новости';
+
   const counter = document.createElement('div');
   counter.className = 'news-item-counter';
 
+  titleInput.addEventListener('input', () => updateBoardPreview(wrapper));
   textarea.addEventListener('input', () => {
     updateNewsItemCounter(textarea, counter);
+    updateBoardPreview(wrapper);
+  });
+  linkInput.addEventListener('input', () => updateBoardPreview(wrapper));
+  imageInput.addEventListener('change', () => {
+    const [file] = imageInput.files || [];
+    if (!file) {
+      wrapper.dataset.imageData = '';
+      imagePreview.removeAttribute('src');
+      imagePreview.classList.remove('is-visible');
+      updateBoardPreview(wrapper);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = typeof reader.result === 'string' ? reader.result : '';
+      wrapper.dataset.imageData = result;
+      imagePreview.src = result;
+      imagePreview.classList.add('is-visible');
+      updateBoardPreview(wrapper);
+    };
+    reader.readAsDataURL(file);
   });
 
   updateNewsItemCounter(textarea, counter);
-  wrapper.append(label, textarea, counter);
+  wrapper.append(label, titleInput, textarea, counter, linkInput, imageInput, imagePreview);
   speechNewsItems.appendChild(wrapper);
+  updateBoardPreview(wrapper);
 }
 
 function setMouthFrame(type, frameIndex) {
@@ -297,7 +367,7 @@ function buildEpisodeScript(mode = 'preview') {
   const speechText = collectSpeechText();
   const outro = document.getElementById('outro-text').value.trim();
   const speechTimeline = getSpeechTimelineConfig();
-  const speechNews = collectSpeechNewsTexts();
+  const speechNews = collectSpeechNewsItems();
 
   const script = {
     episode_title: episodeTitle || 'Ursas Daily',
