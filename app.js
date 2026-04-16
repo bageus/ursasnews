@@ -17,19 +17,19 @@ const manualNewsForm = document.getElementById('manual-news-form');
 const newsList = document.getElementById('news-list');
 const scriptOutput = document.getElementById('script-output');
 const mouthLayer = document.getElementById('mouth-layer');
-const speechTextInput = document.getElementById('speech-text');
 const speechModeInput = document.getElementById('speech-mode');
 const speechDurationInput = document.getElementById('speech-duration');
 const speechWpmInput = document.getElementById('speech-wpm');
 const durationField = document.getElementById('duration-field');
 const wpmField = document.getElementById('wpm-field');
-const speechCharCount = document.getElementById('speech-char-count');
-const speechWordCount = document.getElementById('speech-word-count');
+const speechNewsItems = document.getElementById('speech-news-items');
+const addNewsItemButton = document.getElementById('add-news-item');
 const mouthPreviewButton = document.getElementById('mouth-preview');
 const mouthStopButton = document.getElementById('mouth-stop');
 
 const manualNewsQueue = [];
 let mouthPreviewTimerIds = [];
+let speechNewsIndex = 0;
 
 const mouthSprites = {
   idle: {
@@ -59,10 +59,50 @@ function getWordsCount(text) {
   return (text.match(/[^\s]+/g) || []).length;
 }
 
-function updateSpeechCounters() {
-  const text = speechTextInput.value;
-  speechCharCount.textContent = String(text.length);
-  speechWordCount.textContent = String(getWordsCount(text));
+function collectSpeechNewsTexts() {
+  const textareas = speechNewsItems.querySelectorAll('.speech-news-text');
+  return Array.from(textareas)
+    .map((textarea) => textarea.value.trim())
+    .filter(Boolean);
+}
+
+function collectSpeechText() {
+  return collectSpeechNewsTexts().join(' ');
+}
+
+function updateNewsItemCounter(textarea, counterElement) {
+  const text = textarea.value;
+  const chars = text.length;
+  const words = getWordsCount(text);
+  counterElement.textContent = `${chars} симв / ${words} слов`;
+}
+
+function addSpeechNewsItem(initialValue = '') {
+  speechNewsIndex += 1;
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'news-item-row';
+
+  const label = document.createElement('label');
+  label.className = 'news-item-label';
+  label.textContent = `Новость ${speechNewsIndex}`;
+
+  const textarea = document.createElement('textarea');
+  textarea.className = 'speech-news-text';
+  textarea.rows = 3;
+  textarea.placeholder = 'Текст новости для озвучки...';
+  textarea.value = initialValue;
+
+  const counter = document.createElement('div');
+  counter.className = 'news-item-counter';
+
+  textarea.addEventListener('input', () => {
+    updateNewsItemCounter(textarea, counter);
+  });
+
+  updateNewsItemCounter(textarea, counter);
+  wrapper.append(label, textarea, counter);
+  speechNewsItems.appendChild(wrapper);
 }
 
 function setMouthFrame(type, frameIndex) {
@@ -137,7 +177,7 @@ function buildSpeechEvents(text) {
 
 function getSpeechTimelineConfig() {
   const mode = speechModeInput.value;
-  const text = speechTextInput.value.trim();
+  const text = collectSpeechText();
   const words = getWordsCount(text);
   const durationSeconds = Number(speechDurationInput.value || 10);
   const wpm = Number(speechWpmInput.value || 150);
@@ -254,9 +294,10 @@ function buildEpisodeScript(mode = 'preview') {
   const subtitleFontFamily = document.getElementById('subtitle-font-family').value.trim() || 'Inter';
   const subtitleFontWeight = Number(document.getElementById('subtitle-font-weight').value || 700);
   const intro = document.getElementById('intro-text').value.trim();
-  const speechText = speechTextInput.value.trim();
+  const speechText = collectSpeechText();
   const outro = document.getElementById('outro-text').value.trim();
   const speechTimeline = getSpeechTimelineConfig();
+  const speechNews = collectSpeechNewsTexts();
 
   const script = {
     episode_title: episodeTitle || 'Ursas Daily',
@@ -282,6 +323,7 @@ function buildEpisodeScript(mode = 'preview') {
     },
     intro,
     anchor_speech_text: speechText,
+    anchor_speech_news: speechNews,
     segments: manualNewsQueue.map((news, idx) => ({
       order: idx + 1,
       type: 'news',
@@ -315,11 +357,11 @@ document.getElementById('final-render').addEventListener('click', () => {
 
 mouthPreviewButton.addEventListener('click', startMouthPreview);
 mouthStopButton.addEventListener('click', stopMouthPreview);
-speechTextInput.addEventListener('input', updateSpeechCounters);
 speechModeInput.addEventListener('change', updateSpeechMode);
+addNewsItemButton.addEventListener('click', () => addSpeechNewsItem());
 
 setNeutralMouth();
-updateSpeechCounters();
 updateSpeechMode();
+addSpeechNewsItem();
 
 renderNewsQueue();
