@@ -32,19 +32,26 @@ const manualNewsQueue = [];
 let mouthPreviewTimerIds = [];
 
 const mouthSprites = {
+  idle: {
+    path: 'public/mounth/улыбка зубами.webp',
+    frames: 6,
+    scale: 0.85,
+    offset_x: 5,
+    offset_y: -4,
+  },
   closed: {
     path: 'public/mounth/рот закрыт нейтральный.webp',
     frames: 10,
     scale: 0.7,
-    offset_x: 0,
-    offset_y: 2,
+    offset_x: 5,
+    offset_y: -2,
   },
   open: {
     path: 'public/mounth/рот улыбка с языком.webp',
     frames: 8,
     scale: 1,
-    offset_x: 0,
-    offset_y: 0,
+    offset_x: 5,
+    offset_y: -4,
   },
 };
 
@@ -70,8 +77,8 @@ function setMouthFrame(type, frameIndex) {
 }
 
 function setNeutralMouth() {
-  const randomClosed = Math.floor(Math.random() * mouthSprites.closed.frames);
-  setMouthFrame('closed', randomClosed);
+  const randomIdle = Math.floor(Math.random() * mouthSprites.idle.frames);
+  setMouthFrame('idle', randomIdle);
 }
 
 function estimateSyllables(word) {
@@ -176,6 +183,8 @@ function startMouthPreview() {
   const unitDurationMs = Math.max(50, speech.total_ms / Math.max(1, totalUnits));
 
   let cursor = 0;
+  const startIdleMs = 180;
+  cursor += startIdleMs;
   events.forEach((event) => {
     const id = setTimeout(() => {
       if (event.type === 'open') {
@@ -241,6 +250,9 @@ function buildEpisodeScript(mode = 'preview') {
   const format = document.getElementById('episode-format').value;
   const fps = Number(document.getElementById('episode-fps').value || 30);
   const subtitles = document.getElementById('episode-subtitles').value === 'true';
+  const subtitleLanguage = document.getElementById('subtitle-language').value;
+  const subtitleFontFamily = document.getElementById('subtitle-font-family').value.trim() || 'Inter';
+  const subtitleFontWeight = Number(document.getElementById('subtitle-font-weight').value || 700);
   const intro = document.getElementById('intro-text').value.trim();
   const speechText = speechTextInput.value.trim();
   const outro = document.getElementById('outro-text').value.trim();
@@ -252,12 +264,22 @@ function buildEpisodeScript(mode = 'preview') {
     scene_template: 'studio_bear_anchor_v1',
     scene_animation: {
       mouth_speech: {
+        idle_sprite: mouthSprites.idle,
         closed_sprite: mouthSprites.closed,
         open_sprite: mouthSprites.open,
         timeline: speechTimeline,
       },
     },
-    render: { format, fps, subtitles },
+    render: {
+      format,
+      fps,
+      subtitles,
+      subtitles_style: {
+        language: subtitleLanguage,
+        font_family: subtitleFontFamily,
+        font_weight: subtitleFontWeight,
+      },
+    },
     intro,
     anchor_speech_text: speechText,
     segments: manualNewsQueue.map((news, idx) => ({

@@ -73,7 +73,7 @@
           </div>
           <div class="card mouth-card">
             <h4>Анимация рта (lip-sync)</h4>
-            <p class="hint">Используются 2 спрайт-листа 100x100: закрытый рот (10 кадров) и открытый (8 кадров). Кадры выбираются случайно по правилам текста.</p>
+            <p class="hint">Используются 3 спрайт-листа: idle «улыбка зубами» (до/после речи), закрытый рот (10 кадров) и открытый (8 кадров). Кадры выбираются случайно по правилам текста.</p>
             <div class="mouth-grid">
               <label>
                 Текст чтения
@@ -131,6 +131,29 @@
               <select id="episode-subtitles">
                 <option value="true">включены</option>
                 <option value="false">выключены</option>
+              </select>
+            </label>
+            <label>
+              Язык субтитров
+              <select id="subtitle-language">
+                <option value="ru" selected>Русский (ru)</option>
+                <option value="en">English (en)</option>
+                <option value="es">Español (es)</option>
+                <option value="de">Deutsch (de)</option>
+              </select>
+            </label>
+            <label>
+              Шрифт субтитров
+              <input type="text" id="subtitle-font-family" value="Inter" />
+            </label>
+            <label>
+              Жирность субтитров
+              <select id="subtitle-font-weight">
+                <option value="400">400 (Regular)</option>
+                <option value="500">500 (Medium)</option>
+                <option value="600">600 (SemiBold)</option>
+                <option value="700" selected>700 (Bold)</option>
+                <option value="800">800 (ExtraBold)</option>
               </select>
             </label>
             <label>
