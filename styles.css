@@ -178,6 +178,7 @@ button:hover {
   margin-top: 10px;
 }
 
+<<<<<<< codex/build-scene-layers-for-role-generation-w9kf2j
 .counter-box {
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -198,6 +199,8 @@ button:hover {
   display: none !important;
 }
 
+=======
+>>>>>>> main
 .row-actions {
   display: flex;
   gap: 8px;
