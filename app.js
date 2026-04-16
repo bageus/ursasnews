@@ -40,6 +40,7 @@ const tubeLeaderboardReload = document.getElementById('tube-lb-reload');
 
 const manualNewsQueue = [];
 let mouthPreviewTimerIds = [];
+let subtitleTimerIds = [];
 let speechNewsIndex = 0;
 let tubeLeaderboardLoaded = false;
 
@@ -57,11 +58,11 @@ const rubricCatalog = [
 
 const mouthSprites = {
   idle: {
-    path: 'public/mounth/улыбка зубами.webp',
-    frames: 6,
-    scale: 1,
+    path: 'public/mounth/рот закрыт нейтральный.webp',
+    frames: 10,
+    scale: 0.7,
     offset_x: 5,
-    offset_y: -14,
+    offset_y: -2,
   },
   closed: {
     path: 'public/mounth/рот закрыт нейтральный.webp',
@@ -125,21 +126,63 @@ function collectFullSpeechText() {
   return [intro, body, outro].filter(Boolean).join(' ');
 }
 
-function updateSceneSubtitles(text = '') {
+function updateSceneSubtitles(currentText = '', nextText = '') {
   const subtitlesEnabled = document.getElementById('episode-subtitles').value === 'true';
   if (!subtitlesEnabled) {
     sceneSubtitles.classList.remove('is-visible');
-    sceneSubtitles.textContent = '';
+    sceneSubtitles.innerHTML = '';
     return;
   }
 
   const subtitleFontFamily = document.getElementById('subtitle-font-family').value.trim() || 'Inter';
   const subtitleFontWeight = Number(document.getElementById('subtitle-font-weight').value || 700);
+  const subtitleFontSize = Number(document.getElementById('subtitle-font-size').value || 16);
 
   sceneSubtitles.style.fontFamily = subtitleFontFamily;
   sceneSubtitles.style.fontWeight = String(subtitleFontWeight);
-  sceneSubtitles.textContent = text || collectFullSpeechText() || '...';
+  sceneSubtitles.style.fontSize = `${subtitleFontSize}px`;
+  if (!currentText) {
+    sceneSubtitles.classList.remove('is-visible');
+    sceneSubtitles.innerHTML = '';
+    return;
+  }
+
+  sceneSubtitles.innerHTML = `<div>${currentText}</div>${nextText ? `<div class="subtitle-next">${nextText}</div>` : ''}`;
   sceneSubtitles.classList.add('is-visible');
+}
+
+function clearSubtitleTimers() {
+  subtitleTimerIds.forEach((id) => clearTimeout(id));
+  subtitleTimerIds = [];
+}
+
+function splitSentences(text) {
+  return (text.match(/[^.!?]+[.!?]?/g) || []).map((s) => s.trim()).filter(Boolean);
+}
+
+function scheduleSubtitles(text, totalMs) {
+  clearSubtitleTimers();
+
+  const sentences = splitSentences(text);
+  if (sentences.length === 0) {
+    updateSceneSubtitles('', '');
+    return;
+  }
+
+  const wordCounts = sentences.map((sentence) => Math.max(1, getWordsCount(sentence)));
+  const totalWords = wordCounts.reduce((sum, count) => sum + count, 0);
+  let cursor = 0;
+
+  sentences.forEach((sentence, index) => {
+    const nextSentence = sentences[index + 1] || '';
+    const id = setTimeout(() => {
+      updateSceneSubtitles(sentence, nextSentence);
+    }, cursor);
+    subtitleTimerIds.push(id);
+
+    const duration = Math.max(700, Math.round((wordCounts[index] / totalWords) * totalMs));
+    cursor += duration;
+  });
 }
 
 function updateNewsItemCounter(textarea, counterElement) {
@@ -488,8 +531,9 @@ function getSpeechTimelineConfig() {
 function stopMouthPreview() {
   mouthPreviewTimerIds.forEach((id) => clearTimeout(id));
   mouthPreviewTimerIds = [];
+  clearSubtitleTimers();
   setNeutralMouth();
-  updateSceneSubtitles();
+  updateSceneSubtitles('', '');
 }
 
 function startMouthPreview() {
@@ -498,10 +542,10 @@ function startMouthPreview() {
   const speech = getSpeechTimelineConfig();
   if (!speech.text) {
     setNeutralMouth();
-    updateSceneSubtitles('');
+    updateSceneSubtitles('', '');
     return;
   }
-  updateSceneSubtitles(speech.text);
+  scheduleSubtitles(speech.text, speech.total_ms);
 
   const events = buildSpeechEvents(speech.text);
   if (events.length === 0) {
@@ -610,6 +654,7 @@ function buildEpisodeScript(mode = 'preview') {
         language: subtitleLanguage,
         font_family: subtitleFontFamily,
         font_weight: subtitleFontWeight,
+        font_size: Number(document.getElementById('subtitle-font-size').value || 16),
       },
     },
     intro,
@@ -653,6 +698,7 @@ rubricSelect.addEventListener('change', () => {
 document.getElementById('episode-subtitles').addEventListener('change', () => updateSceneSubtitles());
 document.getElementById('subtitle-font-family').addEventListener('input', () => updateSceneSubtitles());
 document.getElementById('subtitle-font-weight').addEventListener('change', () => updateSceneSubtitles());
+document.getElementById('subtitle-font-size').addEventListener('input', () => updateSceneSubtitles());
 document.getElementById('intro-text').addEventListener('input', () => updateSceneSubtitles());
 document.getElementById('outro-text').addEventListener('input', () => updateSceneSubtitles());
 tubeLeaderboardReload.addEventListener('click', loadTubeLeaderboard);
@@ -665,6 +711,5 @@ addRubricButton.disabled = true;
 if (document.getElementById('rubrics').classList.contains('is-active') || !tubeLeaderboardLoaded) {
   loadTubeLeaderboard();
 }
-updateSceneSubtitles();
 
 renderNewsQueue();

@@ -187,7 +187,7 @@ button:hover {
 .scene-subtitles {
   position: absolute;
   left: 50%;
-  top: 70%;
+  top: calc(70% + 50px);
   width: 74%;
   transform: translateX(-50%);
   padding: 6px 8px;
@@ -203,6 +203,11 @@ button:hover {
 
 .scene-subtitles.is-visible {
   display: block;
+}
+
+.subtitle-next {
+  margin-top: 4px;
+  opacity: 0.75;
 }
 
 .board-layer {

@@ -172,7 +172,11 @@
                 </label>
                 <label>
                   Шрифт субтитров
-                  <input type="text" id="subtitle-font-family" value="Inter" />
+                  <select id="subtitle-font-family">
+                    <option value="Inter" selected>Inter</option>
+                    <option value="Arial">Arial</option>
+                    <option value="Roboto">Roboto</option>
+                  </select>
                 </label>
                 <label>
                   Жирность субтитров
@@ -183,6 +187,10 @@
                     <option value="700" selected>700 (Bold)</option>
                     <option value="800">800 (ExtraBold)</option>
                   </select>
+                </label>
+                <label>
+                  Размер шрифта субтитров
+                  <input type="number" id="subtitle-font-size" min="10" max="48" value="16" />
                 </label>
               </div>
             </div>
