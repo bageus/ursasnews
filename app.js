@@ -52,7 +52,7 @@ const mouthSprites = {
     frames: 6,
     scale: 1,
     offset_x: 5,
-    offset_y: -8,
+    offset_y: -14,
   },
   closed: {
     path: 'public/mounth/рот закрыт нейтральный.webp',
@@ -176,15 +176,15 @@ function addSpeechNewsItem(initialValue = '') {
 
   const moveUpButton = document.createElement('button');
   moveUpButton.type = 'button';
-  moveUpButton.textContent = 'Поднять выше';
+  moveUpButton.textContent = '↑ Поднять выше';
 
   const moveDownButton = document.createElement('button');
   moveDownButton.type = 'button';
-  moveDownButton.textContent = 'Опустить ниже';
+  moveDownButton.textContent = '↓ Опустить ниже';
 
   const deleteButton = document.createElement('button');
   deleteButton.type = 'button';
-  deleteButton.textContent = 'Удалить новость';
+  deleteButton.textContent = '✕ Удалить новость';
 
   titleInput.addEventListener('input', () => updateBoardPreview(wrapper));
   textarea.addEventListener('input', () => {
@@ -265,6 +265,12 @@ function renumberSpeechNews() {
 
 function fillRubricSelect() {
   rubricSelect.innerHTML = '';
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = 'выбрать рубрику';
+  placeholder.selected = true;
+  rubricSelect.appendChild(placeholder);
+
   rubricCatalog.forEach((rubric) => {
     const option = document.createElement('option');
     option.value = rubric.type;
@@ -284,6 +290,9 @@ function getSelectedRubrics() {
 
 function addSelectedRubric() {
   const type = rubricSelect.value;
+  if (!type) {
+    return;
+  }
   const rubric = rubricCatalog.find((item) => item.type === type);
   if (!rubric) {
     return;
@@ -301,6 +310,8 @@ function addSelectedRubric() {
   link.textContent = rubric.title;
 
   selectedRubrics.appendChild(link);
+  rubricSelect.value = '';
+  addRubricButton.disabled = true;
 }
 
 function setMouthFrame(type, frameIndex) {
@@ -555,10 +566,14 @@ mouthStopButton.addEventListener('click', stopMouthPreview);
 speechModeInput.addEventListener('change', updateSpeechMode);
 addNewsItemButton.addEventListener('click', () => addSpeechNewsItem());
 addRubricButton.addEventListener('click', addSelectedRubric);
+rubricSelect.addEventListener('change', () => {
+  addRubricButton.disabled = !rubricSelect.value;
+});
 
 setNeutralMouth();
 updateSpeechMode();
 addSpeechNewsItem();
 fillRubricSelect();
+addRubricButton.disabled = true;
 
 renderNewsQueue();
