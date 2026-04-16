@@ -10,6 +10,10 @@ tabs.forEach((tab) => {
 
     tab.classList.add('is-active');
     document.getElementById(tabId).classList.add('is-active');
+
+    if (tabId === 'rubrics') {
+      loadTubeLeaderboard();
+    }
   });
 });
 
@@ -31,10 +35,16 @@ const boardNewsImagePreview = document.getElementById('board-news-image-preview'
 const selectedRubrics = document.getElementById('selected-rubrics');
 const rubricSelect = document.getElementById('rubric-select');
 const addRubricButton = document.getElementById('add-rubric');
+const tubeLeaderboardList = document.getElementById('tube-leaderboard-list');
+const tubeLeaderboardStatus = document.getElementById('tube-lb-status');
+const tubeLeaderboardReload = document.getElementById('tube-lb-reload');
 
 const manualNewsQueue = [];
 let mouthPreviewTimerIds = [];
 let speechNewsIndex = 0;
+let tubeLeaderboardLoaded = false;
+
+const TUBE_BACKEND_URL = 'https://api.ursasstube.fun';
 
 const rubricCatalog = [
   { type: 'ursas_index', title: 'Ursas Index' },
@@ -277,6 +287,72 @@ function fillRubricSelect() {
     option.textContent = rubric.title;
     rubricSelect.appendChild(option);
   });
+}
+
+function formatWallet(wallet) {
+  if (!wallet || wallet.length < 10) {
+    return wallet || '—';
+  }
+
+  return `${wallet.slice(0, 6)}…${wallet.slice(-4)}`;
+}
+
+function renderTubeLeaderboardRows(entries) {
+  tubeLeaderboardList.innerHTML = '';
+
+  entries.forEach((entry, index) => {
+    const row = document.createElement('div');
+    row.className = 'tube-lb-row';
+
+    const rank = document.createElement('span');
+    rank.className = 'tube-lb-rank';
+    rank.textContent = `#${index + 1}`;
+    if (index === 0) rank.classList.add('is-gold');
+    if (index === 1) rank.classList.add('is-silver');
+    if (index === 2) rank.classList.add('is-bronze');
+
+    const wallet = document.createElement('span');
+    wallet.className = 'tube-lb-wallet';
+    wallet.textContent = formatWallet(String(entry.wallet || entry.userWallet || ''));
+
+    const score = document.createElement('span');
+    score.className = 'tube-lb-score';
+    score.textContent = String(Math.floor(Number(entry.bestScore ?? entry.score ?? 0)));
+
+    row.append(rank, wallet, score);
+    tubeLeaderboardList.appendChild(row);
+  });
+}
+
+async function loadTubeLeaderboard() {
+  if (!tubeLeaderboardList || !tubeLeaderboardStatus) {
+    return;
+  }
+
+  tubeLeaderboardStatus.textContent = 'Загрузка leaderboard...';
+
+  try {
+    const response = await fetch(`${TUBE_BACKEND_URL}/api/leaderboard/top`, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    const leaderboard = Array.isArray(data?.leaderboard) ? data.leaderboard : [];
+    renderTubeLeaderboardRows(leaderboard.slice(0, 10));
+    tubeLeaderboardStatus.textContent =
+      leaderboard.length > 0
+        ? `Топ-${Math.min(10, leaderboard.length)} игроков Ursass Tube`
+        : 'Нет данных leaderboard';
+    tubeLeaderboardLoaded = true;
+  } catch (error) {
+    tubeLeaderboardStatus.textContent = `Ошибка загрузки leaderboard: ${error}`;
+    tubeLeaderboardList.innerHTML = '';
+  }
 }
 
 function getSelectedRubrics() {
@@ -569,11 +645,15 @@ addRubricButton.addEventListener('click', addSelectedRubric);
 rubricSelect.addEventListener('change', () => {
   addRubricButton.disabled = !rubricSelect.value;
 });
+tubeLeaderboardReload.addEventListener('click', loadTubeLeaderboard);
 
 setNeutralMouth();
 updateSpeechMode();
 addSpeechNewsItem();
 fillRubricSelect();
 addRubricButton.disabled = true;
+if (document.getElementById('rubrics').classList.contains('is-active') || !tubeLeaderboardLoaded) {
+  loadTubeLeaderboard();
+}
 
 renderNewsQueue();

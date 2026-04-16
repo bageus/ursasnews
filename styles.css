@@ -330,6 +330,48 @@ button:hover {
   min-width: 220px;
 }
 
+.tube-leaderboard-list {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0;
+}
+
+.tube-lb-row {
+  display: grid;
+  grid-template-columns: 56px 1fr auto;
+  gap: 10px;
+  align-items: center;
+  background: #0f1530;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.tube-lb-rank {
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.tube-lb-rank.is-gold {
+  color: #ffd95a;
+}
+
+.tube-lb-rank.is-silver {
+  color: #d6e1f3;
+}
+
+.tube-lb-rank.is-bronze {
+  color: #f0a76a;
+}
+
+.tube-lb-wallet {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.tube-lb-score {
+  font-weight: 700;
+}
+
 .row-actions {
   display: flex;
   gap: 8px;
