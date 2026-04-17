@@ -232,6 +232,29 @@ button:hover {
   object-fit: cover;
 }
 
+.board-news-mode {
+  position: absolute;
+  inset: 0;
+  display: none;
+}
+
+.board-news-mode.is-visible {
+  display: block;
+}
+
+.board-head-wrap,
+.board-image-wrap {
+  position: absolute;
+  inset: 0;
+}
+
+.board-head-base,
+.board-image-base {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .board-news-title {
   position: absolute;
   top: 34%;

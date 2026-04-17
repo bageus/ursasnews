@@ -38,6 +38,8 @@ const subtitleBoldInput = document.getElementById('subtitle-bold');
 const subtitleJoystick = document.getElementById('subtitle-joystick');
 const subtitlePositionReadout = document.getElementById('subtitle-position-readout');
 const boardLayer = document.getElementById('board-layer');
+const boardDefaultLayer = document.getElementById('board-default-layer');
+const boardNewsMode = document.getElementById('board-news-mode');
 const boardNewsTitle = document.getElementById('board-news-title');
 const boardNewsImagePreview = document.getElementById('board-news-image-preview');
 const tubeLeaderboardList = document.getElementById('tube-leaderboard-list');
@@ -193,6 +195,10 @@ function applySubtitlePosition() {
 }
 
 function setBoardContent(title = '', imageData = '') {
+  const hasNews = Boolean(title || imageData);
+  boardDefaultLayer.classList.toggle('is-hidden', hasNews);
+  boardNewsMode.classList.toggle('is-visible', hasNews);
+
   boardNewsTitle.textContent = title || 'URSAS NEWS';
   if (imageData) {
     boardNewsImagePreview.src = imageData;
