@@ -126,11 +126,13 @@ function collectFullSpeechText() {
   return [intro, body, outro].filter(Boolean).join(' ');
 }
 
-function updateSceneSubtitles(currentText = '', nextText = '') {
+function updateSceneSubtitles(currentText = '', nextText = '', forceClear = false) {
   const subtitlesEnabled = document.getElementById('episode-subtitles').value === 'true';
-  if (!subtitlesEnabled) {
+  if (!subtitlesEnabled || forceClear) {
     sceneSubtitles.classList.remove('is-visible');
     sceneSubtitles.innerHTML = '';
+    sceneSubtitles.dataset.current = '';
+    sceneSubtitles.dataset.next = '';
     return;
   }
 
@@ -141,12 +143,19 @@ function updateSceneSubtitles(currentText = '', nextText = '') {
   sceneSubtitles.style.fontFamily = subtitleFontFamily;
   sceneSubtitles.style.fontWeight = String(subtitleFontWeight);
   sceneSubtitles.style.fontSize = `${subtitleFontSize}px`;
+
+  if (!currentText && !nextText && sceneSubtitles.dataset.current) {
+    currentText = sceneSubtitles.dataset.current;
+    nextText = sceneSubtitles.dataset.next || '';
+  }
+
   if (!currentText) {
     sceneSubtitles.classList.remove('is-visible');
-    sceneSubtitles.innerHTML = '';
     return;
   }
 
+  sceneSubtitles.dataset.current = currentText;
+  sceneSubtitles.dataset.next = nextText;
   sceneSubtitles.innerHTML = `<div>${currentText}</div>${nextText ? `<div class="subtitle-next">${nextText}</div>` : ''}`;
   sceneSubtitles.classList.add('is-visible');
 }
@@ -533,7 +542,7 @@ function stopMouthPreview() {
   mouthPreviewTimerIds = [];
   clearSubtitleTimers();
   setNeutralMouth();
-  updateSceneSubtitles('', '');
+  updateSceneSubtitles('', '', true);
 }
 
 function startMouthPreview() {
@@ -542,7 +551,7 @@ function startMouthPreview() {
   const speech = getSpeechTimelineConfig();
   if (!speech.text) {
     setNeutralMouth();
-    updateSceneSubtitles('', '');
+    updateSceneSubtitles('', '', true);
     return;
   }
   scheduleSubtitles(speech.text, speech.total_ms);
