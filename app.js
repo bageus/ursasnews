@@ -34,6 +34,10 @@ const selectedRubrics = document.getElementById('selected-rubrics');
 const rubricSelect = document.getElementById('rubric-select');
 const addRubricButton = document.getElementById('add-rubric');
 const sceneSubtitles = document.getElementById('scene-subtitles');
+const subtitleBoldInput = document.getElementById('subtitle-bold');
+const subtitleJoystick = document.getElementById('subtitle-joystick');
+const subtitlePositionReadout = document.getElementById('subtitle-position-readout');
+const boardLayer = document.getElementById('board-layer');
 const tubeLeaderboardList = document.getElementById('tube-leaderboard-list');
 const tubeLeaderboardStatus = document.getElementById('tube-lb-status');
 const tubeLeaderboardReload = document.getElementById('tube-lb-reload');
@@ -47,6 +51,7 @@ let mouthPreviewTimerIds = [];
 let subtitleTimerIds = [];
 let speechNewsIndex = 0;
 let tubeLeaderboardLoaded = false;
+const subtitlePosition = { x: 0, y: 0 };
 
 const TUBE_BACKEND_URL = 'https://api.ursasstube.fun';
 
@@ -78,6 +83,8 @@ const commandHelpItems = [
   ['*emotion_smile', 'Эмоция улыбка (ассеты позже).'],
   ['*emotion_surprise', 'Эмоция удивление (ассеты позже).'],
   ['*emotion_doubt', 'Эмоция сомнение (ассеты позже).'],
+  ['*board_news_front 0', 'Перенести доску с новостью вперед, 0 = без ограничения по времени.'],
+  ['*board_news_back 0', 'Перенести доску с новостью назад, 0 = базовое состояние.'],
 ];
 
 function openCommandsOverlay() {
@@ -177,6 +184,12 @@ function collectFullSpeechText() {
   return [intro, body, outro].filter(Boolean).join(' ');
 }
 
+function applySubtitlePosition() {
+  sceneSubtitles.style.left = `calc(50% + ${subtitlePosition.x}px)`;
+  sceneSubtitles.style.top = `calc(70% + 50px + ${subtitlePosition.y}px)`;
+  subtitlePositionReadout.textContent = `x: ${subtitlePosition.x}, y: ${subtitlePosition.y}`;
+}
+
 function parseSpeechCommands(rawText) {
   const normalized = (rawText || '').replace(/\s+/g, ' ').trim();
   if (!normalized) {
@@ -206,7 +219,13 @@ function parseSpeechCommands(rawText) {
       continue;
     }
 
-    actions.push({ type: command });
+    const maybeDuration = Number(tokens[i + 1]);
+    if (Number.isFinite(maybeDuration) && maybeDuration >= 0) {
+      actions.push({ type: command, duration_ms: maybeDuration });
+      i += 1;
+    } else {
+      actions.push({ type: command, duration_ms: 0 });
+    }
   }
 
   return {
@@ -227,12 +246,13 @@ function updateSceneSubtitles(currentText = '', nextText = '', forceClear = fals
   }
 
   const subtitleFontFamily = document.getElementById('subtitle-font-family').value.trim() || 'Inter';
-  const subtitleFontWeight = Number(document.getElementById('subtitle-font-weight').value || 700);
+  const subtitleFontWeight = subtitleBoldInput.value === 'true' ? 700 : 400;
   const subtitleFontSize = Number(document.getElementById('subtitle-font-size').value || 16);
 
   sceneSubtitles.style.fontFamily = subtitleFontFamily;
   sceneSubtitles.style.fontWeight = String(subtitleFontWeight);
   sceneSubtitles.style.fontSize = `${subtitleFontSize}px`;
+  applySubtitlePosition();
 
   if (!currentText && !nextText && sceneSubtitles.dataset.current) {
     currentText = sceneSubtitles.dataset.current;
@@ -248,6 +268,14 @@ function updateSceneSubtitles(currentText = '', nextText = '', forceClear = fals
   sceneSubtitles.dataset.next = nextText;
   sceneSubtitles.innerHTML = `<div>${currentText}</div>${nextText ? `<div class="subtitle-next">${nextText}</div>` : ''}`;
   sceneSubtitles.classList.add('is-visible');
+}
+
+function setBoardFront() {
+  boardLayer.classList.add('is-front');
+}
+
+function setBoardBack() {
+  boardLayer.classList.remove('is-front');
 }
 
 function clearSubtitleTimers() {
@@ -593,7 +621,13 @@ function buildSpeechEvents(rawText) {
           i += 1;
         }
       } else {
-        tokens.push({ type: 'action', command });
+        const duration = Number(scriptTokens[i + 1]);
+        if (Number.isFinite(duration) && duration >= 0) {
+          tokens.push({ type: 'action', command, duration_ms: duration });
+          i += 1;
+        } else {
+          tokens.push({ type: 'action', command, duration_ms: 0 });
+        }
       }
       continue;
     }
@@ -611,7 +645,7 @@ function buildSpeechEvents(rawText) {
     }
 
     if (token.type === 'action') {
-      events.push({ type: 'action', command: token.command });
+      events.push({ type: 'action', command: token.command, duration_ms: token.duration_ms || 0 });
       return;
     }
 
@@ -677,6 +711,7 @@ function stopMouthPreview() {
   mouthPreviewTimerIds = [];
   clearSubtitleTimers();
   setNeutralMouth();
+  setBoardBack();
   updateSceneSubtitles('', '', true);
 }
 
@@ -717,6 +752,17 @@ function startMouthPreview() {
         setMouthFrame('closed', event.frameIndex || 0);
       } else if (event.type === 'pause_ms') {
         setMouthFrame('closed', Math.floor(Math.random() * mouthSprites.closed.frames));
+      } else if (event.type === 'action') {
+        if (event.command === 'board_news_front') {
+          setBoardFront();
+          if (event.duration_ms > 0) {
+            const backTimer = setTimeout(setBoardBack, event.duration_ms);
+            mouthPreviewTimerIds.push(backTimer);
+          }
+        }
+        if (event.command === 'board_news_back') {
+          setBoardBack();
+        }
       }
     }, cursor);
     mouthPreviewTimerIds.push(id);
@@ -782,7 +828,7 @@ function buildEpisodeScript(mode = 'preview') {
   const subtitles = document.getElementById('episode-subtitles').value === 'true';
   const subtitleLanguage = document.getElementById('subtitle-language').value;
   const subtitleFontFamily = document.getElementById('subtitle-font-family').value.trim() || 'Inter';
-  const subtitleFontWeight = Number(document.getElementById('subtitle-font-weight').value || 700);
+  const subtitleFontWeight = subtitleBoldInput.value === 'true' ? 700 : 400;
   const intro = document.getElementById('intro-text').value.trim();
   const speechText = collectFullSpeechText();
   const outro = document.getElementById('outro-text').value.trim();
@@ -810,7 +856,9 @@ function buildEpisodeScript(mode = 'preview') {
         language: subtitleLanguage,
         font_family: subtitleFontFamily,
         font_weight: subtitleFontWeight,
+        bold: subtitleBoldInput.value === 'true',
         font_size: Number(document.getElementById('subtitle-font-size').value || 16),
+        position: { x: subtitlePosition.x, y: subtitlePosition.y },
       },
     },
     intro,
@@ -860,10 +908,25 @@ commandsOverlay.addEventListener('click', (event) => {
 });
 document.getElementById('episode-subtitles').addEventListener('change', () => updateSceneSubtitles());
 document.getElementById('subtitle-font-family').addEventListener('input', () => updateSceneSubtitles());
-document.getElementById('subtitle-font-weight').addEventListener('change', () => updateSceneSubtitles());
+subtitleBoldInput.addEventListener('change', () => updateSceneSubtitles());
 document.getElementById('subtitle-font-size').addEventListener('input', () => updateSceneSubtitles());
 document.getElementById('intro-text').addEventListener('input', () => updateSceneSubtitles());
 document.getElementById('outro-text').addEventListener('input', () => updateSceneSubtitles());
+subtitleJoystick.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-move]');
+  if (!button) return;
+  const step = 5;
+  const move = button.dataset.move;
+  if (move === 'up') subtitlePosition.y -= step;
+  if (move === 'down') subtitlePosition.y += step;
+  if (move === 'left') subtitlePosition.x -= step;
+  if (move === 'right') subtitlePosition.x += step;
+  if (move === 'reset') {
+    subtitlePosition.x = 0;
+    subtitlePosition.y = 0;
+  }
+  applySubtitlePosition();
+});
 tubeLeaderboardReload.addEventListener('click', loadTubeLeaderboard);
 
 setNeutralMouth();
@@ -872,6 +935,7 @@ addSpeechNewsItem();
 fillRubricSelect();
 addRubricButton.disabled = true;
 renderCommandsHelp();
+applySubtitlePosition();
 if (document.getElementById('rubrics').classList.contains('is-active') || !tubeLeaderboardLoaded) {
   loadTubeLeaderboard();
 }

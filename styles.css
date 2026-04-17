@@ -222,6 +222,10 @@ button:hover {
   inset: 0;
 }
 
+.board-layer.is-front {
+  z-index: 9;
+}
+
 .board-base {
   width: 100%;
   height: 100%;
@@ -365,6 +369,49 @@ button:hover {
 
 .rubrics-controls select {
   min-width: 220px;
+}
+
+.subtitle-joystick-wrap {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+  background: #0f1530;
+}
+
+.subtitle-joystick-wrap p {
+  margin: 0 0 8px;
+  font-size: 13px;
+}
+
+.subtitle-joystick {
+  display: grid;
+  grid-template-columns: repeat(3, 34px);
+  grid-template-areas:
+    ". up ."
+    "left reset right"
+    ". down .";
+  gap: 6px;
+  justify-content: start;
+}
+
+.subtitle-joystick button[data-move='up'] {
+  grid-area: up;
+}
+
+.subtitle-joystick button[data-move='left'] {
+  grid-area: left;
+}
+
+.subtitle-joystick button[data-move='reset'] {
+  grid-area: reset;
+}
+
+.subtitle-joystick button[data-move='right'] {
+  grid-area: right;
+}
+
+.subtitle-joystick button[data-move='down'] {
+  grid-area: down;
 }
 
 .help-btn {

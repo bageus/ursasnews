@@ -128,19 +128,27 @@
                   </select>
                 </label>
                 <label>
-                  Жирность субтитров
-                  <select id="subtitle-font-weight">
-                    <option value="400">400 (Regular)</option>
-                    <option value="500">500 (Medium)</option>
-                    <option value="600">600 (SemiBold)</option>
-                    <option value="700" selected>700 (Bold)</option>
-                    <option value="800">800 (ExtraBold)</option>
+                  Жирные субтитры
+                  <select id="subtitle-bold">
+                    <option value="false">Нет</option>
+                    <option value="true" selected>Да</option>
                   </select>
                 </label>
                 <label>
                   Размер шрифта субтитров
                   <input type="number" id="subtitle-font-size" min="10" max="48" value="16" />
                 </label>
+                <div class="subtitle-joystick-wrap">
+                  <p>Позиция субтитров (джойстик)</p>
+                  <div class="subtitle-joystick" id="subtitle-joystick">
+                    <button type="button" data-move="up">↑</button>
+                    <button type="button" data-move="left">←</button>
+                    <button type="button" data-move="reset">•</button>
+                    <button type="button" data-move="right">→</button>
+                    <button type="button" data-move="down">↓</button>
+                  </div>
+                  <span id="subtitle-position-readout" class="hint">x: 0, y: 0</span>
+                </div>
               </div>
             </div>
             <label>
@@ -185,7 +193,7 @@
             <div class="scene-stage" aria-label="Превью сцены для генерации ролика">
               <img src="public/base scene/backwall.webp" alt="Задняя стена сцены" class="scene-layer" />
               <img src="public/base scene/table.webp" alt="Стол сцены" class="scene-layer" />
-              <div class="scene-layer board-layer">
+              <div id="board-layer" class="scene-layer board-layer">
                 <img src="public/base scene/board-news.webp" alt="Доска новостей" class="board-base" />
                 <div id="board-news-title" class="board-news-title">URSAS NEWS</div>
                 <img id="board-news-image-preview" class="board-news-image" alt="Изображение новости" />
