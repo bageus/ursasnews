@@ -37,6 +37,10 @@ const sceneSubtitles = document.getElementById('scene-subtitles');
 const tubeLeaderboardList = document.getElementById('tube-leaderboard-list');
 const tubeLeaderboardStatus = document.getElementById('tube-lb-status');
 const tubeLeaderboardReload = document.getElementById('tube-lb-reload');
+const commandsOverlay = document.getElementById('commands-overlay');
+const commandsClose = document.getElementById('commands-close');
+const commandsList = document.getElementById('commands-list');
+const helpButtons = document.querySelectorAll('[data-help="commands"]');
 
 const manualNewsQueue = [];
 let mouthPreviewTimerIds = [];
@@ -45,6 +49,53 @@ let speechNewsIndex = 0;
 let tubeLeaderboardLoaded = false;
 
 const TUBE_BACKEND_URL = 'https://api.ursasstube.fun';
+
+const commandHelpItems = [
+  ['*speak_pause 100', 'Пауза в речи на 100 мс.'],
+  ['*left_arm_low', 'Поднять левую руку немного (ассеты позже).'],
+  ['*left_arm_mid', 'Поднять левую руку средне (ассеты позже).'],
+  ['*left_arm_high', 'Поднять левую руку выше (ассеты позже).'],
+  ['*left_arm_down', 'Опустить левую руку на стол (ассеты позже).'],
+  ['*right_arm_low', 'Поднять правую руку немного (ассеты позже).'],
+  ['*right_arm_mid', 'Поднять правую руку средне (ассеты позже).'],
+  ['*right_arm_high', 'Поднять правую руку выше (ассеты позже).'],
+  ['*right_arm_down', 'Опустить правую руку на стол (ассеты позже).'],
+  ['*take_sheet', 'Взять листок (ассеты позже).'],
+  ['*read_sheet', 'Читать листок (ассеты позже).'],
+  ['*down_sheet', 'Положить листок на стол (ассеты позже).'],
+  ['*left_turn_head_low', 'Поворот головы влево немного (ассеты позже).'],
+  ['*left_turn_head_mid', 'Поворот головы влево средне (ассеты позже).'],
+  ['*left_turn_head_high', 'Поворот головы влево сильно (ассеты позже).'],
+  ['*right_turn_head_low', 'Поворот головы вправо немного (ассеты позже).'],
+  ['*right_turn_head_mid', 'Поворот головы вправо средне (ассеты позже).'],
+  ['*right_turn_head_high', 'Поворот головы вправо сильно (ассеты позже).'],
+  ['*left_tilt_head_low', 'Наклон головы влево немного (ассеты позже).'],
+  ['*left_tilt_head_mid', 'Наклон головы влево средне (ассеты позже).'],
+  ['*left_tilt_head_high', 'Наклон головы влево сильно (ассеты позже).'],
+  ['*right_tilt_head_low', 'Наклон головы вправо немного (ассеты позже).'],
+  ['*right_tilt_head_mid', 'Наклон головы вправо средне (ассеты позже).'],
+  ['*right_tilt_head_high', 'Наклон головы вправо сильно (ассеты позже).'],
+  ['*emotion_smile', 'Эмоция улыбка (ассеты позже).'],
+  ['*emotion_surprise', 'Эмоция удивление (ассеты позже).'],
+  ['*emotion_doubt', 'Эмоция сомнение (ассеты позже).'],
+];
+
+function openCommandsOverlay() {
+  commandsOverlay.classList.add('is-open');
+}
+
+function closeCommandsOverlay() {
+  commandsOverlay.classList.remove('is-open');
+}
+
+function renderCommandsHelp() {
+  commandsList.innerHTML = '';
+  commandHelpItems.forEach(([command, description]) => {
+    const li = document.createElement('li');
+    li.innerHTML = `<code>${command}</code> — ${description}`;
+    commandsList.appendChild(li);
+  });
+}
 
 const rubricCatalog = [
   { type: 'ursas_index', title: 'Ursas Index' },
@@ -124,6 +175,45 @@ function collectFullSpeechText() {
   const body = collectSpeechText();
   const outro = document.getElementById('outro-text').value.trim();
   return [intro, body, outro].filter(Boolean).join(' ');
+}
+
+function parseSpeechCommands(rawText) {
+  const normalized = (rawText || '').replace(/\s+/g, ' ').trim();
+  if (!normalized) {
+    return { cleanText: '', actions: [], pauses: [] };
+  }
+
+  const actions = [];
+  const pauses = [];
+  const tokens = normalized.match(/\*[a-z_]+|\d+|[^\s]+/gi) || [];
+  const cleanTokens = [];
+
+  for (let i = 0; i < tokens.length; i += 1) {
+    const token = tokens[i];
+    if (!token.startsWith('*')) {
+      cleanTokens.push(token);
+      continue;
+    }
+
+    const command = token.slice(1).toLowerCase();
+    if (command === 'speak_pause') {
+      const next = tokens[i + 1];
+      const durationMs = Number(next);
+      if (Number.isFinite(durationMs) && durationMs > 0) {
+        pauses.push({ type: 'speak_pause', duration_ms: durationMs });
+        i += 1;
+      }
+      continue;
+    }
+
+    actions.push({ type: command });
+  }
+
+  return {
+    cleanText: cleanTokens.join(' ').replace(/\s+/g, ' ').trim(),
+    actions,
+    pauses,
+  };
 }
 
 function updateSceneSubtitles(currentText = '', nextText = '', forceClear = false) {
@@ -209,7 +299,15 @@ function addSpeechNewsItem(initialValue = '') {
 
   const label = document.createElement('label');
   label.className = 'news-item-label';
-  label.textContent = `Новость ${speechNewsIndex}`;
+  const labelText = document.createElement('span');
+  labelText.className = 'news-item-label-text';
+  labelText.textContent = `Новость ${speechNewsIndex}`;
+  const helpButton = document.createElement('button');
+  helpButton.type = 'button';
+  helpButton.className = 'help-btn';
+  helpButton.textContent = '?';
+  helpButton.addEventListener('click', openCommandsOverlay);
+  label.append(labelText, helpButton);
 
   const titleInput = document.createElement('input');
   titleInput.className = 'speech-news-title';
@@ -323,7 +421,7 @@ function addSpeechNewsItem(initialValue = '') {
 function renumberSpeechNews() {
   const rows = speechNewsItems.querySelectorAll('.news-item-row');
   rows.forEach((row, index) => {
-    row.querySelector('.news-item-label').textContent = `Новость ${index + 1}`;
+    row.querySelector('.news-item-label-text').textContent = `Новость ${index + 1}`;
   });
 }
 
@@ -481,27 +579,59 @@ function pickOpenFrame(word, forceLarge = false) {
   return 3 + Math.floor(Math.random() * 3);
 }
 
-function buildSpeechEvents(text) {
-  const tokens = (text || '').match(/[\p{L}\p{N}-]+|[.,!?;:]/gu) || [];
+function buildSpeechEvents(rawText) {
+  const scriptTokens = (rawText || '').match(/\*[a-z_]+|\d+|[^\s]+/gi) || [];
+  const tokens = [];
+  for (let i = 0; i < scriptTokens.length; i += 1) {
+    const token = scriptTokens[i];
+    if (token.startsWith('*')) {
+      const command = token.slice(1).toLowerCase();
+      if (command === 'speak_pause') {
+        const duration = Number(scriptTokens[i + 1]);
+        if (Number.isFinite(duration) && duration > 0) {
+          tokens.push({ type: 'pause_ms', duration_ms: duration });
+          i += 1;
+        }
+      } else {
+        tokens.push({ type: 'action', command });
+      }
+      continue;
+    }
+
+    const parts = token.match(/[\p{L}\p{N}-]+|[.,!?;:]/gu) || [];
+    parts.forEach((part) => tokens.push({ type: 'speech', value: part }));
+  }
+
   const events = [];
 
   tokens.forEach((token, index) => {
-    const isPunctuation = /^[.,!?;:]$/.test(token);
+    if (token.type === 'pause_ms') {
+      events.push({ type: 'pause_ms', duration_ms: token.duration_ms });
+      return;
+    }
+
+    if (token.type === 'action') {
+      events.push({ type: 'action', command: token.command });
+      return;
+    }
+
+    const value = token.value;
+    const isPunctuation = /^[.,!?;:]$/.test(value);
     if (isPunctuation) {
-      const pauseUnits = token === ',' ? 2 : token === '!' ? 4 : 3;
-      events.push({ type: 'pause', units: pauseUnits, punctuation: token });
+      const pauseUnits = value === ',' ? 2 : value === '!' ? 4 : 3;
+      events.push({ type: 'pause', units: pauseUnits, punctuation: value });
       return;
     }
 
     const nextToken = tokens[index + 1];
-    const forceLarge = nextToken === '!';
-    const syllables = estimateSyllables(token);
+    const forceLarge = nextToken?.type === 'speech' && nextToken.value === '!';
+    const syllables = estimateSyllables(value);
 
     for (let i = 0; i < syllables; i += 1) {
       events.push({
         type: 'open',
         units: 2,
-        frameIndex: pickOpenFrame(token, forceLarge),
+        frameIndex: pickOpenFrame(value, forceLarge),
       });
       events.push({
         type: 'close',
@@ -516,7 +646,9 @@ function buildSpeechEvents(text) {
 
 function getSpeechTimelineConfig() {
   const mode = speechModeInput.value;
-  const text = collectFullSpeechText();
+  const rawText = collectFullSpeechText();
+  const parsed = parseSpeechCommands(rawText);
+  const text = parsed.cleanText;
   const words = getWordsCount(text);
   const durationSeconds = Number(speechDurationInput.value || 10);
   const wpm = Number(speechWpmInput.value || 150);
@@ -532,8 +664,11 @@ function getSpeechTimelineConfig() {
     duration_seconds: durationSeconds,
     words_per_minute: wpm,
     text,
+    raw_text: rawText,
     words_count: words,
     chars_count: text.length,
+    actions: parsed.actions,
+    pauses: parsed.pauses,
   };
 }
 
@@ -556,14 +691,20 @@ function startMouthPreview() {
   }
   scheduleSubtitles(speech.text, speech.total_ms);
 
-  const events = buildSpeechEvents(speech.text);
+  const events = buildSpeechEvents(speech.raw_text);
   if (events.length === 0) {
     setNeutralMouth();
     return;
   }
 
-  const totalUnits = events.reduce((sum, event) => sum + event.units, 0);
-  const unitDurationMs = Math.max(50, speech.total_ms / Math.max(1, totalUnits));
+  const fixedPauseMs = events
+    .filter((event) => event.type === 'pause_ms')
+    .reduce((sum, event) => sum + event.duration_ms, 0);
+  const variableUnits = events
+    .filter((event) => event.type !== 'pause_ms')
+    .reduce((sum, event) => sum + (event.units || 0), 0);
+  const variableTotalMs = Math.max(300, speech.total_ms - fixedPauseMs);
+  const unitDurationMs = Math.max(50, variableTotalMs / Math.max(1, variableUnits));
 
   let cursor = 0;
   const startIdleMs = 180;
@@ -572,12 +713,18 @@ function startMouthPreview() {
     const id = setTimeout(() => {
       if (event.type === 'open') {
         setMouthFrame('open', event.frameIndex);
-      } else {
+      } else if (event.type === 'close') {
         setMouthFrame('closed', event.frameIndex || 0);
+      } else if (event.type === 'pause_ms') {
+        setMouthFrame('closed', Math.floor(Math.random() * mouthSprites.closed.frames));
       }
     }, cursor);
     mouthPreviewTimerIds.push(id);
-    cursor += event.units * unitDurationMs;
+    if (event.type === 'pause_ms') {
+      cursor += event.duration_ms;
+    } else {
+      cursor += (event.units || 0) * unitDurationMs;
+    }
   });
 
   const finishId = setTimeout(setNeutralMouth, cursor);
@@ -704,6 +851,13 @@ addRubricButton.addEventListener('click', addSelectedRubric);
 rubricSelect.addEventListener('change', () => {
   addRubricButton.disabled = !rubricSelect.value;
 });
+helpButtons.forEach((button) => button.addEventListener('click', openCommandsOverlay));
+commandsClose.addEventListener('click', closeCommandsOverlay);
+commandsOverlay.addEventListener('click', (event) => {
+  if (event.target === commandsOverlay) {
+    closeCommandsOverlay();
+  }
+});
 document.getElementById('episode-subtitles').addEventListener('change', () => updateSceneSubtitles());
 document.getElementById('subtitle-font-family').addEventListener('input', () => updateSceneSubtitles());
 document.getElementById('subtitle-font-weight').addEventListener('change', () => updateSceneSubtitles());
@@ -717,6 +871,7 @@ updateSpeechMode();
 addSpeechNewsItem();
 fillRubricSelect();
 addRubricButton.disabled = true;
+renderCommandsHelp();
 if (document.getElementById('rubrics').classList.contains('is-active') || !tubeLeaderboardLoaded) {
   loadTubeLeaderboard();
 }

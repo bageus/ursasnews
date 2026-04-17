@@ -144,7 +144,10 @@
               </div>
             </div>
             <label>
-              Интро
+              <span class="label-row">
+                Интро
+                <button type="button" class="help-btn" data-help="commands">?</button>
+              </span>
               <textarea id="intro-text" rows="2">Всем привет, с вами Ursas News.</textarea>
             </label>
             <div class="news-block">
@@ -163,7 +166,10 @@
               </div>
             </div>
             <label>
-              Аутро
+              <span class="label-row">
+                Аутро
+                <button type="button" class="help-btn" data-help="commands">?</button>
+              </span>
               <textarea id="outro-text" rows="2">Подписывайтесь на Ursas News.</textarea>
             </label>
             <div class="row-actions">
@@ -254,6 +260,19 @@
       </section>
     </main>
 
+    <div id="commands-overlay" class="commands-overlay">
+      <div class="commands-modal">
+        <div class="commands-modal-head">
+          <h3>Команды анимации</h3>
+          <button type="button" id="commands-close">Закрыть</button>
+        </div>
+        <p class="hint">
+          Общая логика: команда начинается с <code>*</code> и вставляется прямо в текст. Пример:
+          <code>*speak_pause 100</code>.
+        </p>
+        <ul id="commands-list" class="commands-list"></ul>
+      </div>
+    </div>
     <script src="app.js"></script>
   </body>
 </html>
