@@ -57,38 +57,111 @@
       </section>
 
       <section class="panel" id="video">
-        <h2>Генерация ролика (MVP)</h2>
-        <p>Фокус на фазе 2: редактируем сценарий и формируем payload для рендера.</p>
-
         <div class="grid-2">
           <form id="script-form" class="card form-grid">
             <label>
               Название выпуска
               <input type="text" id="episode-title" value="Ursas Daily" />
             </label>
-            <label>
-              Формат
-              <select id="episode-format">
-                <option value="1080x1920">1080x1920 (vertical)</option>
-                <option value="1920x1080">1920x1080 (horizontal)</option>
-                <option value="1080x1080">1080x1080 (square)</option>
-              </select>
-            </label>
-            <label>
-              FPS
-              <input type="number" id="episode-fps" min="24" max="60" value="30" />
-            </label>
-            <label>
-              Субтитры
-              <select id="episode-subtitles">
-                <option value="true">включены</option>
-                <option value="false">выключены</option>
-              </select>
-            </label>
+            <div class="settings-block">
+              <h4>Формат рендера</h4>
+              <div class="settings-grid">
+                <label>
+                  Формат
+                  <select id="episode-format">
+                    <option value="1080x1920">1080x1920 (vertical)</option>
+                    <option value="1920x1080">1920x1080 (horizontal)</option>
+                    <option value="1080x1080">1080x1080 (square)</option>
+                  </select>
+                </label>
+                <label>
+                  FPS
+                  <input type="number" id="episode-fps" min="24" max="60" value="30" />
+                </label>
+              </div>
+            </div>
+            <div class="settings-block">
+              <h4>Скорость чтения</h4>
+              <div class="settings-grid">
+                <label>
+                  Режим скорости чтения
+                  <select id="speech-mode">
+                    <option value="duration">Прочитать за время</option>
+                    <option value="wpm">Скорость слов/мин</option>
+                  </select>
+                </label>
+                <label id="duration-field">
+                  Длительность чтения (сек)
+                  <input type="number" id="speech-duration" min="1" value="10" />
+                </label>
+                <label id="wpm-field" class="is-hidden">
+                  Скорость (слов в минуту)
+                  <input type="number" id="speech-wpm" min="60" max="320" value="150" />
+                </label>
+              </div>
+            </div>
+            <div class="settings-block">
+              <h4>Субтитры</h4>
+              <div class="settings-grid">
+                <label>
+                  Субтитры
+                  <select id="episode-subtitles">
+                    <option value="true">включены</option>
+                    <option value="false">выключены</option>
+                  </select>
+                </label>
+                <label>
+                  Язык субтитров
+                  <select id="subtitle-language">
+                    <option value="ru" selected>Русский (ru)</option>
+                    <option value="en">English (en)</option>
+                    <option value="es">Español (es)</option>
+                    <option value="de">Deutsch (de)</option>
+                  </select>
+                </label>
+                <label>
+                  Шрифт субтитров
+                  <select id="subtitle-font-family">
+                    <option value="Inter" selected>Inter</option>
+                    <option value="Arial">Arial</option>
+                    <option value="Roboto">Roboto</option>
+                  </select>
+                </label>
+                <label>
+                  Жирность субтитров
+                  <select id="subtitle-font-weight">
+                    <option value="400">400 (Regular)</option>
+                    <option value="500">500 (Medium)</option>
+                    <option value="600">600 (SemiBold)</option>
+                    <option value="700" selected>700 (Bold)</option>
+                    <option value="800">800 (ExtraBold)</option>
+                  </select>
+                </label>
+                <label>
+                  Размер шрифта субтитров
+                  <input type="number" id="subtitle-font-size" min="10" max="48" value="16" />
+                </label>
+              </div>
+            </div>
             <label>
               Интро
               <textarea id="intro-text" rows="2">Всем привет, с вами Ursas News.</textarea>
             </label>
+            <div class="news-block">
+              <div class="news-block-head">
+                <strong>Новости для чтения</strong>
+                <button type="button" id="add-news-item">+ Добавить новость</button>
+              </div>
+              <div id="speech-news-items" class="news-items"></div>
+            </div>
+            <div class="rubrics-block">
+              <strong>Постоянная рубрика</strong>
+              <div id="selected-rubrics" class="selected-rubrics"></div>
+              <div class="rubrics-controls">
+                <select id="rubric-select"></select>
+                <button type="button" id="add-rubric">Добавить рубрику</button>
+              </div>
+            </div>
             <label>
               Аутро
               <textarea id="outro-text" rows="2">Подписывайтесь на Ursas News.</textarea>
@@ -101,9 +174,31 @@
           </form>
 
           <div class="card">
-            <h3>JSON сценарий / payload</h3>
-            <pre id="script-output">Нажмите «Собрать сценарий»</pre>
+            <h3>Сцена (последовательность слоев)</h3>
+            <p class="hint">Слои собраны в порядке от фона к переднему плану.</p>
+            <div class="scene-stage" aria-label="Превью сцены для генерации ролика">
+              <img src="public/base scene/backwall.webp" alt="Задняя стена сцены" class="scene-layer" />
+              <img src="public/base scene/table.webp" alt="Стол сцены" class="scene-layer" />
+              <div class="scene-layer board-layer">
+                <img src="public/base scene/board-news.webp" alt="Доска новостей" class="board-base" />
+                <div id="board-news-title" class="board-news-title">URSAS NEWS</div>
+                <img id="board-news-image-preview" class="board-news-image" alt="Изображение новости" />
+              </div>
+              <img src="public/base scene/body-shirt.webp" alt="Тело ведущего в рубашке" class="scene-layer" />
+              <img src="public/base scene/head-base.webp" alt="Голова ведущего" class="scene-layer" />
+              <div id="mouth-layer" class="scene-mouth-sprite" aria-label="Анимация рта ведущего"></div>
+              <div id="scene-subtitles" class="scene-subtitles"></div>
+              <img src="public/base scene/arm-base.webp" alt="Базовая рука ведущего" class="scene-layer" />
+            </div>
+            <div class="row-actions">
+              <button type="button" id="mouth-preview">Preview речи</button>
+              <button type="button" id="mouth-stop">Stop</button>
+            </div>
           </div>
+        </div>
+        <div class="card">
+          <h3>JSON сценарий / payload</h3>
+          <pre id="script-output">Нажмите «Собрать сценарий»</pre>
         </div>
       </section>
 
@@ -125,6 +220,20 @@
           <div class="card">
             <h3>Bear-world fallback</h3>
             <p>Логика без повторов будет реализована в следующих итерациях.</p>
+          </div>
+          <div class="card">
+            <h3>Язык медведей</h3>
+            <p>Заглушка рубрики.</p>
+          </div>
+          <div class="card">
+            <h3>Roadmap news</h3>
+            <p>Заглушка рубрики.</p>
+          </div>
+          <div class="card">
+            <h3>Ursass Tube leaderboard</h3>
+            <p id="tube-lb-status" class="hint">Загрузка...</p>
+            <div id="tube-leaderboard-list" class="tube-leaderboard-list"></div>
+            <button type="button" id="tube-lb-reload">Обновить</button>
           </div>
         </div>
       </section>
