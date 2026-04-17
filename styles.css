@@ -385,13 +385,20 @@ button:hover {
 
 .subtitle-joystick {
   display: grid;
-  grid-template-columns: repeat(3, 34px);
+  grid-template-columns: repeat(3, 26px);
   grid-template-areas:
     ". up ."
     "left reset right"
     ". down .";
   gap: 6px;
   justify-content: start;
+}
+
+.subtitle-joystick button {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  font-size: 12px;
 }
 
 .subtitle-joystick button[data-move='up'] {

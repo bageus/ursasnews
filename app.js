@@ -38,6 +38,8 @@ const subtitleBoldInput = document.getElementById('subtitle-bold');
 const subtitleJoystick = document.getElementById('subtitle-joystick');
 const subtitlePositionReadout = document.getElementById('subtitle-position-readout');
 const boardLayer = document.getElementById('board-layer');
+const boardNewsTitle = document.getElementById('board-news-title');
+const boardNewsImagePreview = document.getElementById('board-news-image-preview');
 const tubeLeaderboardList = document.getElementById('tube-leaderboard-list');
 const tubeLeaderboardStatus = document.getElementById('tube-lb-status');
 const tubeLeaderboardReload = document.getElementById('tube-lb-reload');
@@ -188,6 +190,59 @@ function applySubtitlePosition() {
   sceneSubtitles.style.left = `calc(50% + ${subtitlePosition.x}px)`;
   sceneSubtitles.style.top = `calc(70% + 50px + ${subtitlePosition.y}px)`;
   subtitlePositionReadout.textContent = `x: ${subtitlePosition.x}, y: ${subtitlePosition.y}`;
+}
+
+function setBoardContent(title = '', imageData = '') {
+  boardNewsTitle.textContent = title || 'URSAS NEWS';
+  if (imageData) {
+    boardNewsImagePreview.src = imageData;
+    boardNewsImagePreview.classList.add('is-visible');
+  } else {
+    boardNewsImagePreview.removeAttribute('src');
+    boardNewsImagePreview.classList.remove('is-visible');
+  }
+}
+
+function resetBoardContent() {
+  setBoardContent('URSAS NEWS', '');
+}
+
+function scheduleBoardNewsBySpeech(totalMs) {
+  const intro = document.getElementById('intro-text').value.trim();
+  const outro = document.getElementById('outro-text').value.trim();
+  const newsItems = collectSpeechNewsItems();
+  const parts = [
+    { type: 'intro', text: intro },
+    ...newsItems.map((item) => ({ type: 'news', ...item })),
+    { type: 'outro', text: outro },
+  ].filter((part) => (part.text || '').trim().length > 0);
+
+  if (parts.length === 0) {
+    resetBoardContent();
+    return;
+  }
+
+  const wordCounts = parts.map((part) => Math.max(1, getWordsCount(part.text)));
+  const totalWords = wordCounts.reduce((sum, count) => sum + count, 0);
+
+  let cursor = 180;
+  parts.forEach((part, index) => {
+    const duration = Math.max(500, Math.round((wordCounts[index] / totalWords) * totalMs));
+
+    const startTimer = setTimeout(() => {
+      if (part.type === 'news' && part.image_data) {
+        setBoardContent(part.title || 'URSAS NEWS', part.image_data);
+      } else {
+        resetBoardContent();
+      }
+    }, cursor);
+    mouthPreviewTimerIds.push(startTimer);
+
+    cursor += duration;
+  });
+
+  const finishTimer = setTimeout(resetBoardContent, cursor + 50);
+  mouthPreviewTimerIds.push(finishTimer);
 }
 
 function parseSpeechCommands(rawText) {
@@ -712,6 +767,7 @@ function stopMouthPreview() {
   clearSubtitleTimers();
   setNeutralMouth();
   setBoardBack();
+  resetBoardContent();
   updateSceneSubtitles('', '', true);
 }
 
@@ -725,6 +781,7 @@ function startMouthPreview() {
     return;
   }
   scheduleSubtitles(speech.text, speech.total_ms);
+  scheduleBoardNewsBySpeech(speech.total_ms);
 
   const events = buildSpeechEvents(speech.raw_text);
   if (events.length === 0) {
