@@ -124,21 +124,21 @@ const mouthSprites = {
     frames: 10,
     scale: 0.7,
     offset_x: 5,
-    offset_y: -2,
+    offset_y: -12,
   },
   closed: {
     path: 'public/mounth/рот закрыт нейтральный.webp',
     frames: 10,
     scale: 0.7,
     offset_x: 5,
-    offset_y: -2,
+    offset_y: -12,
   },
   open: {
     path: 'public/mounth/рот улыбка с языком.webp',
     frames: 8,
     scale: 1,
     offset_x: 5,
-    offset_y: -4,
+    offset_y: -14,
   },
 };
 
