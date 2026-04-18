@@ -49,6 +49,10 @@ const boardImageBaseLayer = document.getElementById('board-image-base-layer');
 const boardImageSlot = document.getElementById('board-image-slot');
 const boardNewsTitle = document.getElementById('board-news-title');
 const boardNewsImagePreview = document.getElementById('board-news-image-preview');
+const boardImageFitModeInput = document.getElementById('board-image-fit-mode');
+const boardImageOffsetXInput = document.getElementById('board-image-offset-x');
+const boardImageOffsetYInput = document.getElementById('board-image-offset-y');
+const boardImagePositionReadout = document.getElementById('board-image-position-readout');
 const tubeLeaderboardList = document.getElementById('tube-leaderboard-list');
 const tubeLeaderboardStatus = document.getElementById('tube-lb-status');
 const tubeLeaderboardReload = document.getElementById('tube-lb-reload');
@@ -68,11 +72,13 @@ const boardSlotConfig = {
     inset: '18% 16% 21% 16%',
     width: 900,
     height: 520,
+    title: { top: '34%', left: '51%', width: '36%', size: '19px' },
   },
   '1920x1080': {
     inset: '17% 16% 23% 16%',
     width: 1280,
     height: 640,
+    title: { top: '34%', left: '51%', width: '36%', size: '19px' },
   },
 };
 
@@ -222,7 +228,7 @@ function setBoardContent(title = '', imageData = '', isNewsReading = false) {
   boardDefaultLayer.classList.toggle('is-hidden', isNewsReading);
   boardNewsMode.classList.toggle('is-visible', isNewsReading);
 
-  boardNewsTitle.textContent = title || 'URSAS NEWS';
+  boardNewsTitle.textContent = normalizeBoardTitle(title || 'URSAS NEWS');
   if (imageData) {
     boardNewsImagePreview.src = imageData;
     boardNewsImagePreview.classList.add('is-visible');
@@ -230,6 +236,52 @@ function setBoardContent(title = '', imageData = '', isNewsReading = false) {
     boardNewsImagePreview.removeAttribute('src');
     boardNewsImagePreview.classList.remove('is-visible');
   }
+}
+
+function transliterateRuToEn(value) {
+  const map = {
+    а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ё: 'e', ж: 'zh', з: 'z', и: 'i', й: 'y',
+    к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', п: 'p', р: 'r', с: 's', т: 't', у: 'u', ф: 'f',
+    х: 'h', ц: 'c', ч: 'ch', ш: 'sh', щ: 'sch', ъ: '', ы: 'y', ь: '', э: 'e', ю: 'yu', я: 'ya',
+  };
+  return String(value || '')
+    .split('')
+    .map((char) => {
+      const lower = char.toLowerCase();
+      if (!(lower in map)) return char;
+      const translit = map[lower];
+      return char === lower ? translit : translit.toUpperCase();
+    })
+    .join('');
+}
+
+function normalizeBoardTitle(value) {
+  const transliterated = transliterateRuToEn(value);
+  const englishSafe = transliterated.replace(/[^a-z0-9 .,!?:&'"/+-]/gi, ' ');
+  const compact = englishSafe.replace(/\s+/g, ' ').trim();
+  if (!compact) {
+    return 'URSAS NEWS';
+  }
+  return compact.toUpperCase().slice(0, 48);
+}
+
+function getBoardImageRenderSettings() {
+  const fitMode = boardImageFitModeInput.value === 'contain' ? 'contain' : 'cover';
+  const offsetX = Number(boardImageOffsetXInput.value || 0);
+  const offsetY = Number(boardImageOffsetYInput.value || 0);
+  return { fitMode, offsetX, offsetY };
+}
+
+function updateBoardImageReadout() {
+  const { offsetX, offsetY } = getBoardImageRenderSettings();
+  boardImagePositionReadout.textContent = `x: ${offsetX}, y: ${offsetY}`;
+}
+
+function updateBoardImagePositionStyle() {
+  const { fitMode, offsetX, offsetY } = getBoardImageRenderSettings();
+  boardNewsImagePreview.style.objectFit = fitMode;
+  boardNewsImagePreview.style.objectPosition = `calc(50% + ${offsetX}%) calc(50% + ${offsetY}%)`;
+  updateBoardImageReadout();
 }
 
 function readFileAsDataUrl(file) {
@@ -255,6 +307,7 @@ async function fitImageToBoardSlot(file) {
   const sourceImage = await loadImageFromDataUrl(dataUrl);
   const format = episodeFormatInput.value === '1920x1080' ? '1920x1080' : '1080x1920';
   const slot = boardSlotConfig[format];
+  const { fitMode, offsetX, offsetY } = getBoardImageRenderSettings();
   const targetWidth = slot?.width || 900;
   const targetHeight = slot?.height || 520;
 
@@ -266,22 +319,40 @@ async function fitImageToBoardSlot(file) {
     return dataUrl;
   }
 
-  const srcRatio = sourceImage.width / sourceImage.height;
+  const srcWidth = sourceImage.width;
+  const srcHeight = sourceImage.height;
+  const srcRatio = srcWidth / srcHeight;
   const targetRatio = targetWidth / targetHeight;
-  let sx = 0;
-  let sy = 0;
-  let sWidth = sourceImage.width;
-  let sHeight = sourceImage.height;
+  const safeOffsetX = Math.max(-100, Math.min(100, offsetX)) / 100;
+  const safeOffsetY = Math.max(-100, Math.min(100, offsetY)) / 100;
 
-  if (srcRatio > targetRatio) {
-    sWidth = Math.round(sourceImage.height * targetRatio);
-    sx = Math.round((sourceImage.width - sWidth) / 2);
-  } else if (srcRatio < targetRatio) {
-    sHeight = Math.round(sourceImage.width / targetRatio);
-    sy = Math.round((sourceImage.height - sHeight) / 2);
+  if (fitMode === 'contain') {
+    const scale = Math.min(targetWidth / srcWidth, targetHeight / srcHeight);
+    const drawWidth = Math.round(srcWidth * scale);
+    const drawHeight = Math.round(srcHeight * scale);
+    const maxDx = (targetWidth - drawWidth) / 2;
+    const maxDy = (targetHeight - drawHeight) / 2;
+    const dx = Math.round((targetWidth - drawWidth) / 2 + maxDx * safeOffsetX);
+    const dy = Math.round((targetHeight - drawHeight) / 2 + maxDy * safeOffsetY);
+    ctx.drawImage(sourceImage, 0, 0, srcWidth, srcHeight, dx, dy, drawWidth, drawHeight);
+  } else {
+    let sx = 0;
+    let sy = 0;
+    let sWidth = srcWidth;
+    let sHeight = srcHeight;
+
+    if (srcRatio > targetRatio) {
+      sWidth = Math.round(srcHeight * targetRatio);
+      const extra = srcWidth - sWidth;
+      sx = Math.round((extra / 2) * (safeOffsetX + 1));
+    } else if (srcRatio < targetRatio) {
+      sHeight = Math.round(srcWidth / targetRatio);
+      const extra = srcHeight - sHeight;
+      sy = Math.round((extra / 2) * (safeOffsetY + 1));
+    }
+
+    ctx.drawImage(sourceImage, sx, sy, sWidth, sHeight, 0, 0, targetWidth, targetHeight);
   }
-
-  ctx.drawImage(sourceImage, sx, sy, sWidth, sHeight, 0, 0, targetWidth, targetHeight);
   return canvas.toDataURL('image/webp', 0.92);
 }
 
@@ -749,6 +820,11 @@ function applySceneLayout(format) {
     : 'public/base scene/board_news.webp';
   const slot = boardSlotConfig[format] || boardSlotConfig['1080x1920'];
   boardImageSlot.style.setProperty('--board-image-slot-inset', slot.inset);
+  boardNewsTitle.style.setProperty('--board-title-top', slot.title.top);
+  boardNewsTitle.style.setProperty('--board-title-left', slot.title.left);
+  boardNewsTitle.style.setProperty('--board-title-width', slot.title.width);
+  boardNewsTitle.style.setProperty('--board-title-size', slot.title.size);
+  updateBoardImagePositionStyle();
 }
 
 function setNeutralMouth() {
@@ -1085,6 +1161,9 @@ subtitleBoldInput.addEventListener('change', () => updateSceneSubtitles());
 document.getElementById('subtitle-font-size').addEventListener('input', () => updateSceneSubtitles());
 document.getElementById('intro-text').addEventListener('input', () => updateSceneSubtitles());
 document.getElementById('outro-text').addEventListener('input', () => updateSceneSubtitles());
+boardImageFitModeInput.addEventListener('change', updateBoardImagePositionStyle);
+boardImageOffsetXInput.addEventListener('input', updateBoardImagePositionStyle);
+boardImageOffsetYInput.addEventListener('input', updateBoardImagePositionStyle);
 subtitleJoystick.addEventListener('click', (event) => {
   const button = event.target.closest('[data-move]');
   if (!button) return;
@@ -1110,6 +1189,7 @@ fillRubricSelect();
 addRubricButton.disabled = true;
 renderCommandsHelp();
 applySubtitlePosition();
+updateBoardImagePositionStyle();
 if (document.getElementById('rubrics').classList.contains('is-active') || !tubeLeaderboardLoaded) {
   loadTubeLeaderboard();
 }

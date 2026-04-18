@@ -151,6 +151,29 @@
                 </div>
               </div>
             </div>
+            <div class="settings-block">
+              <h4>Кадр изображения новости</h4>
+              <div class="settings-grid">
+                <label>
+                  Режим подгонки
+                  <select id="board-image-fit-mode">
+                    <option value="cover" selected>Cover (обрезка по краям)</option>
+                    <option value="contain">Contain (без обрезки)</option>
+                  </select>
+                </label>
+                <label>
+                  Смещение X (−100..100)
+                  <input type="range" id="board-image-offset-x" min="-100" max="100" step="1" value="0" />
+                </label>
+                <label>
+                  Смещение Y (−100..100)
+                  <input type="range" id="board-image-offset-y" min="-100" max="100" step="1" value="0" />
+                </label>
+                <div class="board-image-position-readout-wrap">
+                  <span id="board-image-position-readout" class="hint">x: 0, y: 0</span>
+                </div>
+              </div>
+            </div>
             <label>
               <span class="label-row">
                 Интро
