@@ -30,16 +30,22 @@ const speechNewsItems = document.getElementById('speech-news-items');
 const addNewsItemButton = document.getElementById('add-news-item');
 const mouthPreviewButton = document.getElementById('mouth-preview');
 const mouthStopButton = document.getElementById('mouth-stop');
+const episodeFormatInput = document.getElementById('episode-format');
 const selectedRubrics = document.getElementById('selected-rubrics');
 const rubricSelect = document.getElementById('rubric-select');
 const addRubricButton = document.getElementById('add-rubric');
 const sceneSubtitles = document.getElementById('scene-subtitles');
+const sceneStage = document.getElementById('scene-stage');
+const sceneBackwallLayer = document.getElementById('scene-backwall-layer');
+const sceneTableLayer = document.getElementById('scene-table-layer');
 const subtitleBoldInput = document.getElementById('subtitle-bold');
 const subtitleJoystick = document.getElementById('subtitle-joystick');
 const subtitlePositionReadout = document.getElementById('subtitle-position-readout');
 const boardLayer = document.getElementById('board-layer');
 const boardDefaultLayer = document.getElementById('board-default-layer');
 const boardNewsMode = document.getElementById('board-news-mode');
+const boardHeadBaseLayer = document.getElementById('board-head-base-layer');
+const boardImageBaseLayer = document.getElementById('board-image-base-layer');
 const boardNewsTitle = document.getElementById('board-news-title');
 const boardNewsImagePreview = document.getElementById('board-news-image-preview');
 const tubeLeaderboardList = document.getElementById('tube-leaderboard-list');
@@ -120,21 +126,26 @@ const rubricCatalog = [
 
 const mouthSprites = {
   idle: {
-    path: 'public/mounth/рот закрыт нейтральный.webp',
+    path: 'public/mounth/mounth_close_neitral.webp',
     frames: 10,
-    scale: 0.7,
+    scale: 1,
     offset_x: 5,
     offset_y: -12,
   },
   closed: {
-    path: 'public/mounth/рот закрыт нейтральный.webp',
+    path: 'public/mounth/mounth_close_neitral.webp',
     frames: 10,
-    scale: 0.7,
+    scale: 1,
     offset_x: 5,
     offset_y: -12,
   },
   open: {
-    path: 'public/mounth/рот улыбка с языком.webp',
+    path: 'public/mounth/mounth_open_beauty.webp',
+    variants: [
+      'public/mounth/mounth_open_beauty.webp',
+      'public/mounth/mounth_open_round.webp',
+      'public/mounth/mounth_open_trapecia.webp',
+    ],
     frames: 8,
     scale: 1,
     offset_x: 5,
@@ -634,12 +645,37 @@ function addSelectedRubric() {
 function setMouthFrame(type, frameIndex) {
   const sprite = mouthSprites[type];
   const boundedFrame = Math.min(Math.max(frameIndex, 0), sprite.frames - 1);
+  const spritePath =
+    Array.isArray(sprite.variants) && sprite.variants.length > 0
+      ? sprite.variants[Math.floor(Math.random() * sprite.variants.length)]
+      : sprite.path;
 
-  mouthLayer.style.backgroundImage = `url("${sprite.path}")`;
+  mouthLayer.style.backgroundImage = `url("${spritePath}")`;
   mouthLayer.style.backgroundPosition = `${-100 * boundedFrame}px 0`;
   mouthLayer.style.left = `calc(50% + ${sprite.offset_x}px)`;
   mouthLayer.style.top = `calc(49% + ${sprite.offset_y}px)`;
   mouthLayer.style.transform = `translate(-50%, -50%) scale(${sprite.scale})`;
+}
+
+function applySceneLayout(format) {
+  const isHorizontal = format === '1920x1080';
+  sceneStage.classList.toggle('is-horizontal', isHorizontal);
+
+  sceneBackwallLayer.src = isHorizontal
+    ? 'public/base scene/backwall (horizontal).webp'
+    : 'public/base scene/backwall.webp';
+  sceneTableLayer.src = isHorizontal
+    ? 'public/base scene/table (horizontal).webp'
+    : 'public/base scene/table.webp';
+  boardDefaultLayer.src = isHorizontal
+    ? 'public/base scene/board_head ursas (horizontal).webp'
+    : 'public/base scene/board-news.webp';
+  boardHeadBaseLayer.src = isHorizontal
+    ? 'public/base scene/board_head_empty (horizontal).webp'
+    : 'public/base scene/board_head_empty.webp';
+  boardImageBaseLayer.src = isHorizontal
+    ? 'public/base scene/board_news (horizont).webp'
+    : 'public/base scene/board-news.webp';
 }
 
 function setNeutralMouth() {
@@ -957,6 +993,7 @@ document.getElementById('final-render').addEventListener('click', () => {
 mouthPreviewButton.addEventListener('click', startMouthPreview);
 mouthStopButton.addEventListener('click', stopMouthPreview);
 speechModeInput.addEventListener('change', updateSpeechMode);
+episodeFormatInput.addEventListener('change', () => applySceneLayout(episodeFormatInput.value));
 addNewsItemButton.addEventListener('click', () => addSpeechNewsItem());
 addRubricButton.addEventListener('click', addSelectedRubric);
 rubricSelect.addEventListener('change', () => {
@@ -994,6 +1031,7 @@ tubeLeaderboardReload.addEventListener('click', loadTubeLeaderboard);
 
 setNeutralMouth();
 updateSpeechMode();
+applySceneLayout(episodeFormatInput.value);
 addSpeechNewsItem();
 fillRubricSelect();
 addRubricButton.disabled = true;
