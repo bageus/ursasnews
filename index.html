@@ -169,8 +169,16 @@
                   Смещение Y (−100..100)
                   <input type="range" id="board-image-offset-y" min="-100" max="100" step="1" value="0" />
                 </label>
+                <label>
+                  Ширина изображения в canvas (%)
+                  <input type="range" id="board-image-scale-width" min="20" max="300" step="1" value="100" />
+                </label>
+                <label>
+                  Высота изображения в canvas (%)
+                  <input type="range" id="board-image-scale-height" min="20" max="300" step="1" value="100" />
+                </label>
                 <div class="board-image-position-readout-wrap">
-                  <span id="board-image-position-readout" class="hint">x: 0, y: 0</span>
+                  <span id="board-image-position-readout" class="hint">x: 0, y: 0, w: 100%, h: 100%</span>
                 </div>
               </div>
             </div>
@@ -248,10 +256,10 @@
               </div>
               <img src="public/base scene/body-shirt.webp" alt="Тело ведущего в рубашке" class="scene-layer" />
               <img src="public/base scene/head-base.webp" alt="Голова ведущего" class="scene-layer" />
-              <div id="mouth-layer" class="scene-mouth-sprite" aria-label="Анимация рта ведущего"></div>
-              <div id="scene-subtitles" class="scene-subtitles"></div>
               <img src="public/base scene/arm_base_left.webp" alt="Базовая левая лапа ведущего" class="scene-layer" />
               <img src="public/base scene/arm_base_right.webp" alt="Базовая правая лапа ведущего" class="scene-layer" />
+              <div id="mouth-layer" class="scene-mouth-sprite" aria-label="Анимация рта ведущего"></div>
+              <div id="scene-subtitles" class="scene-subtitles"></div>
             </div>
             <div class="row-actions">
               <button type="button" id="mouth-preview">Preview речи</button>

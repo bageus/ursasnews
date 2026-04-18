@@ -269,6 +269,7 @@ button:hover {
 
 .board-news-title {
   position: absolute;
+  z-index: 2;
   top: var(--board-title-top, 34%);
   left: var(--board-title-left, 51%);
   width: var(--board-title-width, 36%);

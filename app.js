@@ -52,6 +52,8 @@ const boardNewsImagePreview = document.getElementById('board-news-image-preview'
 const boardImageFitModeInput = document.getElementById('board-image-fit-mode');
 const boardImageOffsetXInput = document.getElementById('board-image-offset-x');
 const boardImageOffsetYInput = document.getElementById('board-image-offset-y');
+const boardImageScaleWidthInput = document.getElementById('board-image-scale-width');
+const boardImageScaleHeightInput = document.getElementById('board-image-scale-height');
 const boardImagePositionReadout = document.getElementById('board-image-position-readout');
 const tubeLeaderboardList = document.getElementById('tube-leaderboard-list');
 const tubeLeaderboardStatus = document.getElementById('tube-lb-status');
@@ -67,18 +69,26 @@ let subtitleTimerIds = [];
 let speechNewsIndex = 0;
 let tubeLeaderboardLoaded = false;
 const subtitlePosition = { x: 0, y: 0 };
+const BOARD_NEWS_IMAGE_RECT = { x: 164, y: 276, width: 696, height: 937 };
 const boardSlotConfig = {
   '1080x1920': {
-    inset: '18% 16% 21% 16%',
-    width: 900,
-    height: 520,
-    title: { top: '34%', left: '51%', width: '36%', size: '19px' },
+    asset: { width: 1024, height: 1536 },
+    imageRect: BOARD_NEWS_IMAGE_RECT,
+    width: BOARD_NEWS_IMAGE_RECT.width,
+    height: BOARD_NEWS_IMAGE_RECT.height,
+    title: { top: '34%', left: '51%', width: '36%', size: '40px' },
   },
   '1920x1080': {
-    inset: '17% 16% 23% 16%',
-    width: 1280,
-    height: 640,
-    title: { top: '34%', left: '51%', width: '36%', size: '19px' },
+    asset: { width: 1536, height: 1024 },
+    imageRect: {
+      x: Math.round((BOARD_NEWS_IMAGE_RECT.x / 1024) * 1536),
+      y: Math.round((BOARD_NEWS_IMAGE_RECT.y / 1536) * 1024),
+      width: Math.round((BOARD_NEWS_IMAGE_RECT.width / 1024) * 1536),
+      height: Math.round((BOARD_NEWS_IMAGE_RECT.height / 1536) * 1024),
+    },
+    width: Math.round((BOARD_NEWS_IMAGE_RECT.width / 1024) * 1536),
+    height: Math.round((BOARD_NEWS_IMAGE_RECT.height / 1536) * 1024),
+    title: { top: '34%', left: '51%', width: '36%', size: '40px' },
   },
 };
 
@@ -269,12 +279,14 @@ function getBoardImageRenderSettings() {
   const fitMode = boardImageFitModeInput.value === 'contain' ? 'contain' : 'cover';
   const offsetX = Number(boardImageOffsetXInput.value || 0);
   const offsetY = Number(boardImageOffsetYInput.value || 0);
-  return { fitMode, offsetX, offsetY };
+  const scaleWidth = Number(boardImageScaleWidthInput.value || 100);
+  const scaleHeight = Number(boardImageScaleHeightInput.value || 100);
+  return { fitMode, offsetX, offsetY, scaleWidth, scaleHeight };
 }
 
 function updateBoardImageReadout() {
-  const { offsetX, offsetY } = getBoardImageRenderSettings();
-  boardImagePositionReadout.textContent = `x: ${offsetX}, y: ${offsetY}`;
+  const { offsetX, offsetY, scaleWidth, scaleHeight } = getBoardImageRenderSettings();
+  boardImagePositionReadout.textContent = `x: ${offsetX}, y: ${offsetY}, w: ${scaleWidth}%, h: ${scaleHeight}%`;
 }
 
 function updateBoardImagePositionStyle() {
@@ -307,7 +319,7 @@ async function fitImageToBoardSlot(file) {
   const sourceImage = await loadImageFromDataUrl(dataUrl);
   const format = episodeFormatInput.value === '1920x1080' ? '1920x1080' : '1080x1920';
   const slot = boardSlotConfig[format];
-  const { fitMode, offsetX, offsetY } = getBoardImageRenderSettings();
+  const { fitMode, offsetX, offsetY, scaleWidth, scaleHeight } = getBoardImageRenderSettings();
   const targetWidth = slot?.width || 900;
   const targetHeight = slot?.height || 520;
 
@@ -321,38 +333,21 @@ async function fitImageToBoardSlot(file) {
 
   const srcWidth = sourceImage.width;
   const srcHeight = sourceImage.height;
-  const srcRatio = srcWidth / srcHeight;
-  const targetRatio = targetWidth / targetHeight;
   const safeOffsetX = Math.max(-100, Math.min(100, offsetX)) / 100;
   const safeOffsetY = Math.max(-100, Math.min(100, offsetY)) / 100;
-
-  if (fitMode === 'contain') {
-    const scale = Math.min(targetWidth / srcWidth, targetHeight / srcHeight);
-    const drawWidth = Math.round(srcWidth * scale);
-    const drawHeight = Math.round(srcHeight * scale);
-    const maxDx = (targetWidth - drawWidth) / 2;
-    const maxDy = (targetHeight - drawHeight) / 2;
-    const dx = Math.round((targetWidth - drawWidth) / 2 + maxDx * safeOffsetX);
-    const dy = Math.round((targetHeight - drawHeight) / 2 + maxDy * safeOffsetY);
-    ctx.drawImage(sourceImage, 0, 0, srcWidth, srcHeight, dx, dy, drawWidth, drawHeight);
-  } else {
-    let sx = 0;
-    let sy = 0;
-    let sWidth = srcWidth;
-    let sHeight = srcHeight;
-
-    if (srcRatio > targetRatio) {
-      sWidth = Math.round(srcHeight * targetRatio);
-      const extra = srcWidth - sWidth;
-      sx = Math.round((extra / 2) * (safeOffsetX + 1));
-    } else if (srcRatio < targetRatio) {
-      sHeight = Math.round(srcWidth / targetRatio);
-      const extra = srcHeight - sHeight;
-      sy = Math.round((extra / 2) * (safeOffsetY + 1));
-    }
-
-    ctx.drawImage(sourceImage, sx, sy, sWidth, sHeight, 0, 0, targetWidth, targetHeight);
-  }
+  const safeScaleX = Math.max(20, Math.min(300, scaleWidth)) / 100;
+  const safeScaleY = Math.max(20, Math.min(300, scaleHeight)) / 100;
+  const baseScale =
+    fitMode === 'contain'
+      ? Math.min(targetWidth / srcWidth, targetHeight / srcHeight)
+      : Math.max(targetWidth / srcWidth, targetHeight / srcHeight);
+  const drawWidth = Math.round(srcWidth * baseScale * safeScaleX);
+  const drawHeight = Math.round(srcHeight * baseScale * safeScaleY);
+  const freeShiftX = Math.abs(drawWidth - targetWidth) / 2;
+  const freeShiftY = Math.abs(drawHeight - targetHeight) / 2;
+  const dx = Math.round((targetWidth - drawWidth) / 2 + freeShiftX * safeOffsetX);
+  const dy = Math.round((targetHeight - drawHeight) / 2 + freeShiftY * safeOffsetY);
+  ctx.drawImage(sourceImage, 0, 0, srcWidth, srcHeight, dx, dy, drawWidth, drawHeight);
   return canvas.toDataURL('image/webp', 0.92);
 }
 
@@ -845,7 +840,11 @@ function applySceneLayout(format) {
     ? 'public/base scene/board_news (horizont).webp'
     : 'public/base scene/board_news.webp';
   const slot = boardSlotConfig[format] || boardSlotConfig['1080x1920'];
-  boardImageSlot.style.setProperty('--board-image-slot-inset', slot.inset);
+  const left = (slot.imageRect.x / slot.asset.width) * 100;
+  const top = (slot.imageRect.y / slot.asset.height) * 100;
+  const right = ((slot.asset.width - (slot.imageRect.x + slot.imageRect.width)) / slot.asset.width) * 100;
+  const bottom = ((slot.asset.height - (slot.imageRect.y + slot.imageRect.height)) / slot.asset.height) * 100;
+  boardImageSlot.style.setProperty('--board-image-slot-inset', `${top}% ${right}% ${bottom}% ${left}%`);
   boardNewsTitle.style.setProperty('--board-title-top', slot.title.top);
   boardNewsTitle.style.setProperty('--board-title-left', slot.title.left);
   boardNewsTitle.style.setProperty('--board-title-width', slot.title.width);
@@ -1190,6 +1189,8 @@ document.getElementById('outro-text').addEventListener('input', () => updateScen
 boardImageFitModeInput.addEventListener('change', updateBoardImagePositionStyle);
 boardImageOffsetXInput.addEventListener('input', updateBoardImagePositionStyle);
 boardImageOffsetYInput.addEventListener('input', updateBoardImagePositionStyle);
+boardImageScaleWidthInput.addEventListener('input', updateBoardImagePositionStyle);
+boardImageScaleHeightInput.addEventListener('input', updateBoardImagePositionStyle);
 subtitleJoystick.addEventListener('click', (event) => {
   const button = event.target.closest('[data-move]');
   if (!button) return;
