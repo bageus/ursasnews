@@ -72,13 +72,13 @@ const boardSlotConfig = {
     inset: '18% 16% 21% 16%',
     width: 900,
     height: 520,
-    title: { top: '34%', left: '51%', width: '36%', size: '19px' },
+    title: { top: '34%', left: '51%', width: '36%', size: '40px' },
   },
   '1920x1080': {
     inset: '17% 16% 23% 16%',
     width: 1280,
     height: 640,
-    title: { top: '34%', left: '51%', width: '36%', size: '19px' },
+    title: { top: '34%', left: '51%', width: '36%', size: '40px' },
   },
 };
 
