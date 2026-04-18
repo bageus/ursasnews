@@ -128,15 +128,15 @@ const mouthSprites = {
   idle: {
     path: 'public/mounth/mounth_close_neitral.webp',
     frames: 10,
-    scale: 1,
-    offset_x: 5,
+    scale: 0.6,
+    offset_x: 20,
     offset_y: -12,
   },
   closed: {
     path: 'public/mounth/mounth_close_neitral.webp',
     frames: 10,
-    scale: 1,
-    offset_x: 5,
+    scale: 0.6,
+    offset_x: 20,
     offset_y: -12,
   },
   open: {
@@ -147,8 +147,8 @@ const mouthSprites = {
       'public/mounth/mounth_open_trapecia.webp',
     ],
     frames: 8,
-    scale: 1,
-    offset_x: 5,
+    scale: 0.6,
+    offset_x: 20,
     offset_y: -14,
   },
 };
