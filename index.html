@@ -190,9 +190,9 @@
           <div class="card">
             <h3>Сцена (последовательность слоев)</h3>
             <p class="hint">Слои собраны в порядке от фона к переднему плану.</p>
-            <div class="scene-stage" aria-label="Превью сцены для генерации ролика">
-              <img src="public/base scene/backwall.webp" alt="Задняя стена сцены" class="scene-layer" />
-              <img src="public/base scene/table.webp" alt="Стол сцены" class="scene-layer" />
+            <div id="scene-stage" class="scene-stage" aria-label="Превью сцены для генерации ролика">
+              <img id="scene-backwall-layer" src="public/base scene/backwall.webp" alt="Задняя стена сцены" class="scene-layer" />
+              <img id="scene-table-layer" src="public/base scene/table.webp" alt="Стол сцены" class="scene-layer" />
               <div id="board-layer" class="scene-layer board-layer">
                 <img
                   id="board-default-layer"
@@ -202,11 +202,21 @@
                 />
                 <div id="board-news-mode" class="board-news-mode">
                   <div class="board-head-wrap">
-                    <img src="public/base scene/board_head_empty.webp" alt="Заголовок доски новости" class="board-head-base" />
+                    <img
+                      id="board-head-base-layer"
+                      src="public/base scene/board_head_empty.webp"
+                      alt="Заголовок доски новости"
+                      class="board-head-base"
+                    />
                     <div id="board-news-title" class="board-news-title">URSAS NEWS</div>
                   </div>
                   <div class="board-image-wrap">
-                    <img src="public/base scene/board-news.webp" alt="Панель изображения новости" class="board-image-base" />
+                    <img
+                      id="board-image-base-layer"
+                      src="public/base scene/board-news.webp"
+                      alt="Панель изображения новости"
+                      class="board-image-base"
+                    />
                     <img id="board-news-image-preview" class="board-news-image" alt="Изображение новости" />
                   </div>
                 </div>
