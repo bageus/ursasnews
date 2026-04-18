@@ -205,10 +205,9 @@ function applySubtitlePosition() {
   subtitlePositionReadout.textContent = `x: ${subtitlePosition.x}, y: ${subtitlePosition.y}`;
 }
 
-function setBoardContent(title = '', imageData = '') {
-  const hasNews = Boolean(title || imageData);
-  boardDefaultLayer.classList.toggle('is-hidden', hasNews);
-  boardNewsMode.classList.toggle('is-visible', hasNews);
+function setBoardContent(title = '', imageData = '', isNewsReading = false) {
+  boardDefaultLayer.classList.toggle('is-hidden', isNewsReading);
+  boardNewsMode.classList.toggle('is-visible', isNewsReading);
 
   boardNewsTitle.textContent = title || 'URSAS NEWS';
   if (imageData) {
@@ -221,7 +220,7 @@ function setBoardContent(title = '', imageData = '') {
 }
 
 function resetBoardContent() {
-  setBoardContent('URSAS NEWS', '');
+  setBoardContent('URSAS NEWS', '', false);
 }
 
 function scheduleBoardNewsBySpeech(totalMs) {
@@ -247,8 +246,8 @@ function scheduleBoardNewsBySpeech(totalMs) {
     const duration = Math.max(500, Math.round((wordCounts[index] / totalWords) * totalMs));
 
     const startTimer = setTimeout(() => {
-      if (part.type === 'news' && part.image_data) {
-        setBoardContent(part.title || 'URSAS NEWS', part.image_data);
+      if (part.type === 'news') {
+        setBoardContent(part.title || 'URSAS NEWS', part.image_data || '', true);
       } else {
         resetBoardContent();
       }
@@ -669,13 +668,14 @@ function applySceneLayout(format) {
     : 'public/base scene/table.webp';
   boardDefaultLayer.src = isHorizontal
     ? 'public/base scene/board_head ursas (horizontal).webp'
-    : 'public/base scene/board-news.webp';
+    : 'public/base scene/board_head_ursas.webp';
   boardHeadBaseLayer.src = isHorizontal
     ? 'public/base scene/board_head_empty (horizontal).webp'
     : 'public/base scene/board_head_empty.webp';
   boardImageBaseLayer.src = isHorizontal
     ? 'public/base scene/board_news (horizont).webp'
-    : 'public/base scene/board-news.webp';
+    : 'public/base scene/board_news.webp';
+  boardNewsImagePreview.style.setProperty('--board-image-mask', `url("${boardImageBaseLayer.src}")`);
 }
 
 function setNeutralMouth() {

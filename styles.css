@@ -279,6 +279,14 @@ button:hover {
   inset: 1px;
   object-fit: contain;
   object-position: center;
+  -webkit-mask-image: var(--board-image-mask);
+  mask-image: var(--board-image-mask);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: cover;
+  mask-size: cover;
   display: none;
 }
 
