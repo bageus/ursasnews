@@ -573,6 +573,23 @@ function addSpeechNewsItem(initialValue = '') {
   imagePreview.className = 'news-image-preview';
   imagePreview.alt = 'Превью изображения новости';
 
+  const scenePreview = document.createElement('div');
+  scenePreview.className = 'news-scene-preview';
+
+  const scenePreviewTitle = document.createElement('div');
+  scenePreviewTitle.className = 'news-scene-preview-title';
+  scenePreviewTitle.textContent = normalizeBoardTitle('URSAS NEWS');
+
+  const scenePreviewImageWrap = document.createElement('div');
+  scenePreviewImageWrap.className = 'news-scene-preview-image-wrap';
+
+  const scenePreviewImage = document.createElement('img');
+  scenePreviewImage.className = 'news-scene-preview-image';
+  scenePreviewImage.alt = 'Превью сцены новости';
+
+  scenePreviewImageWrap.appendChild(scenePreviewImage);
+  scenePreview.append(scenePreviewTitle, scenePreviewImageWrap);
+
   const counter = document.createElement('div');
   counter.className = 'news-item-counter';
 
@@ -595,6 +612,9 @@ function addSpeechNewsItem(initialValue = '') {
     updateNewsItemCounter(textarea, counter);
     updateSceneSubtitles();
   });
+  titleInput.addEventListener('input', () => {
+    scenePreviewTitle.textContent = normalizeBoardTitle(titleInput.value.trim() || 'URSAS NEWS');
+  });
   linkInput.addEventListener('input', () => {
     linkInput.setCustomValidity(isValidHttpUrl(linkInput.value.trim()) ? '' : 'Введите ссылку http/https');
   });
@@ -605,6 +625,8 @@ function addSpeechNewsItem(initialValue = '') {
       wrapper.dataset.imageData = '';
       imagePreview.removeAttribute('src');
       imagePreview.classList.remove('is-visible');
+      scenePreviewImage.removeAttribute('src');
+      scenePreviewImage.classList.remove('is-visible');
       return;
     }
 
@@ -613,11 +635,15 @@ function addSpeechNewsItem(initialValue = '') {
         wrapper.dataset.imageData = result;
         imagePreview.src = result;
         imagePreview.classList.add('is-visible');
+        scenePreviewImage.src = result;
+        scenePreviewImage.classList.add('is-visible');
       })
       .catch(() => {
         wrapper.dataset.imageData = '';
         imagePreview.removeAttribute('src');
         imagePreview.classList.remove('is-visible');
+        scenePreviewImage.removeAttribute('src');
+        scenePreviewImage.classList.remove('is-visible');
         imageInput.setCustomValidity('Не удалось обработать изображение. Попробуйте другой файл.');
         imageInput.reportValidity();
       });
@@ -625,7 +651,7 @@ function addSpeechNewsItem(initialValue = '') {
 
   updateNewsItemCounter(textarea, counter);
   actions.append(moveUpButton, moveDownButton, deleteButton);
-  wrapper.append(label, titleInput, textarea, counter, linkInput, imageInput, imagePreview, actions);
+  wrapper.append(label, titleInput, scenePreview, textarea, counter, linkInput, imageInput, imagePreview, actions);
   speechNewsItems.appendChild(wrapper);
 
   moveUpButton.addEventListener('click', () => {
