@@ -2,14 +2,19 @@ const tabs = document.querySelectorAll('.tab');
 const panels = document.querySelectorAll('.panel');
 
 tabs.forEach((tab) => {
-  tab.addEventListener('click', () => {
+  tab.addEventListener('click', (event) => {
+    event.preventDefault();
     const tabId = tab.dataset.tab;
+    const nextPanel = document.getElementById(tabId);
+    if (!nextPanel) {
+      return;
+    }
 
     tabs.forEach((t) => t.classList.remove('is-active'));
     panels.forEach((p) => p.classList.remove('is-active'));
 
     tab.classList.add('is-active');
-    document.getElementById(tabId).classList.add('is-active');
+    nextPanel.classList.add('is-active');
 
     if (tabId === 'rubrics') {
       loadTubeLeaderboard();
@@ -828,30 +833,6 @@ function addSpeechNewsItem(initialValue = '') {
     });
   }
 
-  const rowSettingsBlock = document.createElement('div');
-  rowSettingsBlock.className = 'settings-block news-item-settings';
-  rowSettingsBlock.innerHTML = `
-    <h4>Параметры сцены этой новости</h4>
-    <div class="settings-grid">
-      <label>Режим подгонки
-        <select class="row-fit-mode"><option value="cover">Cover</option><option value="contain">Contain</option></select>
-      </label>
-      <label>Смещение X (−100..100)<input type="range" class="row-offset-x" min="-100" max="100" step="1" value="0" /></label>
-      <label>Смещение Y (−100..100)<input type="range" class="row-offset-y" min="-100" max="100" step="1" value="0" /></label>
-      <label>Ширина image (%)<input type="range" class="row-scale-w" min="20" max="300" step="1" value="100" /></label>
-      <label>Высота image (%)<input type="range" class="row-scale-h" min="20" max="300" step="1" value="100" /></label>
-      <label>Image X (%)<input type="number" class="row-image-x" min="0" max="100" step="0.1" value="16" /></label>
-      <label>Image Y (%)<input type="number" class="row-image-y" min="0" max="100" step="0.1" value="18" /></label>
-      <label>Image width (%)<input type="number" class="row-image-w" min="1" max="100" step="0.1" value="68" /></label>
-      <label>Image height (%)<input type="number" class="row-image-h" min="1" max="100" step="0.1" value="61" /></label>
-      <label>Title X (%)<input type="number" class="row-title-x" min="0" max="100" step="0.1" value="51" /></label>
-      <label>Title Y (%)<input type="number" class="row-title-y" min="0" max="100" step="0.1" value="34" /></label>
-      <label>Title width (%)<input type="number" class="row-title-w" min="1" max="100" step="0.1" value="36" /></label>
-      <label>Title size (px)<input type="number" class="row-title-size" min="8" max="120" step="1" value="40" /></label>
-      <div class="board-image-position-readout-wrap"><span class="hint row-scene-readout"></span></div>
-    </div>
-  `;
-
   const counter = document.createElement('div');
   counter.className = 'news-item-counter';
   const rowReadout = rowSettingsBlock.querySelector('.row-scene-readout');
@@ -887,26 +868,6 @@ function addSpeechNewsItem(initialValue = '') {
     applySceneLayoutToPreviewNode(scenePreview, rowSceneSettings);
     rowReadout.textContent = `x:${rowSceneSettings.offsetX}, y:${rowSceneSettings.offsetY}, w:${rowSceneSettings.scaleWidth}%, h:${rowSceneSettings.scaleHeight}%`;
     wrapper._sceneSettings = { ...rowSceneSettings };
-  }
-
-  function renderNewsSceneTimeline() {
-    sceneTimeline.innerHTML = '';
-    const actions = getSceneActionsForNews(textarea.value);
-    const frames = [{ atMs: 0, type: 'start', label: 'Базовая сцена' }, ...actions];
-    frames.forEach((frame) => {
-      const item = document.createElement('div');
-      item.className = 'news-scene-timeline-item';
-      const sec = (frame.atMs / 1000).toFixed(frame.atMs % 1000 === 0 ? 0 : 1);
-      const previewClone = scenePreview.cloneNode(true);
-      previewClone.classList.add('news-scene-mini');
-      const badge = document.createElement('div');
-      badge.className = 'news-scene-command-badge';
-      badge.textContent = frame.type === 'start' ? 'Базовая сцена' : frame.type;
-      previewClone.appendChild(badge);
-      item.innerHTML = `<strong>t=${sec}s</strong>`;
-      item.appendChild(previewClone);
-      sceneTimeline.appendChild(item);
-    });
   }
 
   const actionsRow = document.createElement('div');
