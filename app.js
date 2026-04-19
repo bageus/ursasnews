@@ -102,10 +102,10 @@ const boardSlotConfig = {
 
 const defaultNewsSceneSettings = {
   fitMode: 'cover',
+  imageAlign: 'center',
   offsetX: 0,
   offsetY: 0,
-  scaleWidth: 100,
-  scaleHeight: 100,
+  zoom: 100,
   imageX: 16,
   imageY: 18,
   imageWidth: 68,
@@ -146,7 +146,7 @@ const commandHelpItems = [
   ['*emotion_smile', 'Эмоция улыбка (ассеты позже).'],
   ['*emotion_surprise', 'Эмоция удивление (ассеты позже).'],
   ['*emotion_doubt', 'Эмоция сомнение (ассеты позже).'],
-  ['*board_news_front 0', 'Перенести доску с новостью вперед, 0 = без ограничения по времени.'],
+  ['*board_news_front 0', 'Перенести слой изображения новости впереди всех остальных слоев, 0 = без ограничения по времени.'],
   ['*board_news_back 0', 'Перенести доску с новостью назад, 0 = базовое состояние.'],
 ];
 
@@ -240,6 +240,7 @@ function collectSpeechNewsItems() {
         image_data,
         scene_settings: row._sceneSettings || { ...defaultNewsSceneSettings },
         scene_frames: Array.isArray(row._sceneFrames) ? row._sceneFrames : [],
+        approved_scene_index: Number.isInteger(row._approvedSceneIndex) ? row._approvedSceneIndex : null,
       };
     })
     .filter((item) => item.title || item.text || item.link || item.image_data);
@@ -310,9 +311,12 @@ function applyImageRenderToNode(node, settings = defaultNewsSceneSettings) {
   if (!node) {
     return;
   }
-  const { fitMode, offsetX, offsetY } = settings;
+  const { fitMode, imageAlign, offsetX, offsetY, zoom } = settings;
+  const xBase = imageAlign === 'left' ? '0%' : '50%';
   node.style.objectFit = fitMode;
-  node.style.objectPosition = `calc(50% + ${offsetX}%) calc(50% + ${offsetY}%)`;
+  node.style.objectPosition = `calc(${xBase} + ${offsetX}%) calc(50% + ${offsetY}%)`;
+  node.style.transformOrigin = imageAlign === 'left' ? 'left center' : 'center center';
+  node.style.transform = `scale(${Math.max(10, Number(zoom) || 100) / 100})`;
 }
 
 function clampNumber(value, min, max, fallback) {
@@ -406,7 +410,7 @@ async function fitImageToBoardSlot(file, settings = defaultNewsSceneSettings) {
   const sourceImage = await loadImageFromDataUrl(dataUrl);
   const format = episodeFormatInput.value === '1920x1080' ? '1920x1080' : '1080x1920';
   const slot = boardSlotConfig[format];
-  const { fitMode, offsetX, offsetY, scaleWidth, scaleHeight } = settings;
+  const { fitMode, offsetX, offsetY } = settings;
   const targetWidth = slot?.width || 900;
   const targetHeight = slot?.height || 520;
 
@@ -547,11 +551,11 @@ function updateSceneSubtitles(currentText = '', nextText = '', forceClear = fals
 }
 
 function setBoardFront() {
-  boardLayer.classList.add('is-front');
+  boardImageSlot.classList.add('is-front');
 }
 
 function setBoardBack() {
-  boardLayer.classList.remove('is-front');
+  boardImageSlot.classList.remove('is-front');
 }
 
 function clearSubtitleTimers() {
@@ -724,19 +728,23 @@ function addSpeechNewsItem(initialValue = '') {
       <label>Режим подгонки
         <select class="row-fit-mode"><option value="cover">Cover</option><option value="contain">Contain</option></select>
       </label>
-      <label>Смещение X (−100..100)<input type="range" class="row-offset-x" min="-100" max="100" step="1" value="0" /></label>
-      <label>Смещение Y (−100..100)<input type="range" class="row-offset-y" min="-100" max="100" step="1" value="0" /></label>
-      <label>Ширина image (%)<input type="range" class="row-scale-w" min="20" max="300" step="1" value="100" /></label>
-      <label>Высота image (%)<input type="range" class="row-scale-h" min="20" max="300" step="1" value="100" /></label>
-      <label>Image X (%)<input type="number" class="row-image-x" min="0" max="100" step="0.1" value="16" /></label>
-      <label>Image Y (%)<input type="number" class="row-image-y" min="0" max="100" step="0.1" value="18" /></label>
+      <label>Выравнивание изображения
+        <select class="row-image-align"><option value="center">По центру</option><option value="left">По левому краю</option></select>
+      </label>
+      <label>Смещение X (−100..100)<input type="number" class="row-offset-x" min="-100" max="100" step="1" value="0" /></label>
+      <label>Смещение Y (−100..100)<input type="number" class="row-offset-y" min="-100" max="100" step="1" value="0" /></label>
+      <label>Zoom изображения (%)<input type="number" class="row-zoom" min="10" max="300" step="1" value="100" /></label>
+      <label>Image X (%)<input type="number" class="row-image-x" min="-100" max="100" step="0.1" value="16" /></label>
+      <label>Image Y (%)<input type="number" class="row-image-y" min="-100" max="100" step="0.1" value="18" /></label>
       <label>Image width (%)<input type="number" class="row-image-w" min="1" max="100" step="0.1" value="68" /></label>
       <label>Image height (%)<input type="number" class="row-image-h" min="1" max="100" step="0.1" value="61" /></label>
-      <label>Title X (%)<input type="number" class="row-title-x" min="0" max="100" step="0.1" value="51" /></label>
-      <label>Title Y (%)<input type="number" class="row-title-y" min="0" max="100" step="0.1" value="34" /></label>
+      <label>Title X (%)<input type="number" class="row-title-x" min="-100" max="100" step="0.1" value="51" /></label>
+      <label>Title Y (%)<input type="number" class="row-title-y" min="-100" max="100" step="0.1" value="34" /></label>
       <label>Title width (%)<input type="number" class="row-title-w" min="1" max="100" step="0.1" value="36" /></label>
       <label>Title size (px)<input type="number" class="row-title-size" min="8" max="120" step="1" value="40" /></label>
+      <div class="board-image-position-readout-wrap"><button type="button" class="row-approve-scene">Approve сцену</button></div>
       <div class="board-image-position-readout-wrap"><span class="hint row-scene-readout"></span></div>
+      <div class="board-image-position-readout-wrap"><span class="hint row-approve-status"></span></div>
     </div>
   `;
   const getControl = (selector) => sceneSettingsPanel.querySelector(selector);
@@ -747,10 +755,10 @@ function addSpeechNewsItem(initialValue = '') {
 
   function setControlsFromSettings(settings) {
     getControl('.row-fit-mode').value = settings.fitMode || 'cover';
+    getControl('.row-image-align').value = settings.imageAlign === 'left' ? 'left' : 'center';
     getControl('.row-offset-x').value = String(settings.offsetX ?? 0);
     getControl('.row-offset-y').value = String(settings.offsetY ?? 0);
-    getControl('.row-scale-w').value = String(settings.scaleWidth ?? 100);
-    getControl('.row-scale-h').value = String(settings.scaleHeight ?? 100);
+    getControl('.row-zoom').value = String(settings.zoom ?? 100);
     getControl('.row-image-x').value = String(settings.imageX ?? 16);
     getControl('.row-image-y').value = String(settings.imageY ?? 18);
     getControl('.row-image-w').value = String(settings.imageWidth ?? 68);
@@ -764,16 +772,16 @@ function addSpeechNewsItem(initialValue = '') {
   function readSettingsFromControls() {
     return {
       fitMode: getControl('.row-fit-mode').value === 'contain' ? 'contain' : 'cover',
+      imageAlign: getControl('.row-image-align').value === 'left' ? 'left' : 'center',
       offsetX: clampNumber(getControl('.row-offset-x').value, -100, 100, 0),
       offsetY: clampNumber(getControl('.row-offset-y').value, -100, 100, 0),
-      scaleWidth: clampNumber(getControl('.row-scale-w').value, 20, 300, 100),
-      scaleHeight: clampNumber(getControl('.row-scale-h').value, 20, 300, 100),
-      imageX: clampNumber(getControl('.row-image-x').value, 0, 100, 16),
-      imageY: clampNumber(getControl('.row-image-y').value, 0, 100, 18),
+      zoom: clampNumber(getControl('.row-zoom').value, 10, 300, 100),
+      imageX: clampNumber(getControl('.row-image-x').value, -100, 100, 16),
+      imageY: clampNumber(getControl('.row-image-y').value, -100, 100, 18),
       imageWidth: clampNumber(getControl('.row-image-w').value, 1, 100, 68),
       imageHeight: clampNumber(getControl('.row-image-h').value, 1, 100, 61),
-      titleX: clampNumber(getControl('.row-title-x').value, 0, 100, 51),
-      titleY: clampNumber(getControl('.row-title-y').value, 0, 100, 34),
+      titleX: clampNumber(getControl('.row-title-x').value, -100, 100, 51),
+      titleY: clampNumber(getControl('.row-title-y').value, -100, 100, 34),
       titleWidth: clampNumber(getControl('.row-title-w').value, 1, 100, 36),
       titleSize: clampNumber(getControl('.row-title-size').value, 8, 120, 40),
     };
@@ -796,7 +804,23 @@ function addSpeechNewsItem(initialValue = '') {
     selectedSceneLabel.textContent = `Выбрана сцена: t=${(frame.atMs / 1000).toFixed(frame.atMs % 1000 === 0 ? 0 : 1)}s`;
     const sceneReadoutElement = sceneSettingsPanel.querySelector('.row-scene-readout');
     if (sceneReadoutElement) {
-      sceneReadoutElement.textContent = `x:${settings.offsetX}, y:${settings.offsetY}, w:${settings.scaleWidth}%, h:${settings.scaleHeight}%`;
+      sceneReadoutElement.textContent = `align:${settings.imageAlign || 'center'}, x:${settings.offsetX}, y:${settings.offsetY}, zoom:${settings.zoom || 100}%`;
+    }
+    const approveStatusElement = sceneSettingsPanel.querySelector('.row-approve-status');
+    const approveButton = sceneSettingsPanel.querySelector('.row-approve-scene');
+    if (approveStatusElement) {
+      if (!Number.isInteger(wrapper._approvedSceneIndex)) {
+        approveStatusElement.textContent = 'Сцена не согласована.';
+      } else if (wrapper._approvedSceneIndex === wrapper._selectedSceneIndex) {
+        approveStatusElement.textContent = 'Сцена согласована и будет использована в итоговом рендере.';
+      } else {
+        approveStatusElement.textContent = `Согласована сцена: t=${((wrapper._sceneFrames[wrapper._approvedSceneIndex]?.atMs || 0) / 1000).toFixed(1)}s`;
+      }
+    }
+    if (approveButton) {
+      const isSelectedApproved = wrapper._approvedSceneIndex === wrapper._selectedSceneIndex;
+      approveButton.textContent = isSelectedApproved ? 'Unapprove сцену' : 'Approve сцену';
+      approveButton.classList.toggle('is-active', isSelectedApproved);
     }
     wrapper._sceneSettings = { ...settings };
   }
@@ -811,6 +835,9 @@ function addSpeechNewsItem(initialValue = '') {
     wrapper._sceneFrames = nextFrames;
     const prevIndex = nextFrames.findIndex((frame) => frame.atMs === previousFrame?.atMs && frame.type === previousFrame?.type);
     wrapper._selectedSceneIndex = prevIndex >= 0 ? prevIndex : 0;
+    if (Number.isInteger(wrapper._approvedSceneIndex) && wrapper._approvedSceneIndex >= nextFrames.length) {
+      wrapper._approvedSceneIndex = null;
+    }
   }
 
   function renderNewsSceneTimeline() {
@@ -834,6 +861,7 @@ function addSpeechNewsItem(initialValue = '') {
 
   const counter = document.createElement('div');
   counter.className = 'news-item-counter';
+  wrapper._approvedSceneIndex = null;
 
   const actionsRow = document.createElement('div');
   actionsRow.className = 'news-item-actions';
@@ -896,6 +924,15 @@ function addSpeechNewsItem(initialValue = '') {
       applySelectedFrameToMainPreview();
       renderNewsSceneTimeline();
     });
+  });
+  getControl('.row-approve-scene').addEventListener('click', () => {
+    if (wrapper._approvedSceneIndex === wrapper._selectedSceneIndex) {
+      wrapper._approvedSceneIndex = null;
+    } else {
+      wrapper._approvedSceneIndex = wrapper._selectedSceneIndex;
+    }
+    applySelectedFrameToMainPreview();
+    renderNewsSceneTimeline();
   });
 
   wrapper.append(label, titleInput, selectedSceneWrap, sceneTimeline, sceneSettingsPanel, textarea, counter, linkInput, imageInput, imagePreview, actionsRow);
@@ -1393,12 +1430,22 @@ function buildEpisodeScript(mode = 'preview') {
     intro,
     anchor_speech_text: speechText,
     anchor_speech_news: speechNews.map((item) => {
+      const approvedFrame = Array.isArray(item.scene_frames) ? item.scene_frames[item.approved_scene_index] : null;
       const sceneSettings = item.scene_settings || { ...defaultNewsSceneSettings };
+      const finalSceneSettings = mode === 'final' && approvedFrame?.settings ? approvedFrame.settings : sceneSettings;
       return {
         ...item,
         title: mode === 'preview' ? '' : item.title,
-        scene_settings: sceneSettings,
-        scene_keyframes: (item.scene_frames || []).map((frame) => ({
+        scene_settings: finalSceneSettings,
+        approved_scene: approvedFrame
+          ? {
+              index: item.approved_scene_index || 0,
+              at_ms: approvedFrame.atMs || 0,
+              type: approvedFrame.type || 'start',
+              settings: approvedFrame.settings || { ...defaultNewsSceneSettings },
+            }
+          : null,
+        scene_keyframes: (mode === 'final' && approvedFrame ? [approvedFrame] : (item.scene_frames || [])).map((frame) => ({
           at_ms: frame.atMs || 0,
           type: frame.type || 'start',
           duration_ms: frame.duration_ms || 0,

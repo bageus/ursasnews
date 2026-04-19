@@ -267,6 +267,10 @@ button:hover {
   border-radius: 6px;
 }
 
+.board-image-slot.is-front {
+  z-index: 20;
+}
+
 .board-news-title {
   position: absolute;
   z-index: 2;
@@ -536,6 +540,11 @@ button:hover {
   display: flex;
   align-items: end;
   grid-column: 1 / -1;
+}
+
+.row-approve-scene.is-active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px rgba(142, 227, 79, 0.3) inset;
 }
 
 .news-item-actions {
