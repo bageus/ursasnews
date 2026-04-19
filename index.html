@@ -245,36 +245,50 @@
 
       <section class="panel" id="rubrics">
         <h2>Рубрики (заглушка MVP)</h2>
-        <div class="grid-2">
-          <div class="card">
+        <div id="rubrics-grid" class="grid-2">
+          <div class="card rubric-card" data-rubric-type="ursas_index" data-rubric-title="Ursas Index">
+            <button type="button" class="rubric-edit-btn" data-rubric-edit title="Добавить описание">✏️</button>
             <h3>Ursas Index</h3>
             <p id="ursas-index">42</p>
+            <p class="rubric-description" data-rubric-description></p>
           </div>
-          <div class="card">
+          <div class="card rubric-card" data-rubric-type="number_of_day" data-rubric-title="Число дня">
+            <button type="button" class="rubric-edit-btn" data-rubric-edit title="Добавить описание">✏️</button>
             <h3>Число дня</h3>
             <p id="number-of-day">7</p>
+            <p class="rubric-description" data-rubric-description></p>
           </div>
-          <div class="card">
+          <div class="card rubric-card" data-rubric-type="top_10_faill" data-rubric-title="Top-10 падающих">
+            <button type="button" class="rubric-edit-btn" data-rubric-edit title="Добавить описание">✏️</button>
             <h3>Top-10 падающих</h3>
             <p>Заглушка: данные будут подставляться позже.</p>
+            <p class="rubric-description" data-rubric-description></p>
           </div>
-          <div class="card">
+          <div class="card rubric-card" data-rubric-type="bear_world_news" data-rubric-title="Bear-world fallback">
+            <button type="button" class="rubric-edit-btn" data-rubric-edit title="Добавить описание">✏️</button>
             <h3>Bear-world fallback</h3>
             <p>Логика без повторов будет реализована в следующих итерациях.</p>
+            <p class="rubric-description" data-rubric-description></p>
           </div>
-          <div class="card">
+          <div class="card rubric-card" data-rubric-type="bear_language" data-rubric-title="Язык медведей">
+            <button type="button" class="rubric-edit-btn" data-rubric-edit title="Добавить описание">✏️</button>
             <h3>Язык медведей</h3>
             <p>Заглушка рубрики.</p>
+            <p class="rubric-description" data-rubric-description></p>
           </div>
-          <div class="card">
+          <div class="card rubric-card" data-rubric-type="roadmap_news" data-rubric-title="Roadmap news">
+            <button type="button" class="rubric-edit-btn" data-rubric-edit title="Добавить описание">✏️</button>
             <h3>Roadmap news</h3>
             <p>Заглушка рубрики.</p>
+            <p class="rubric-description" data-rubric-description></p>
           </div>
-          <div class="card">
+          <div class="card rubric-card" data-rubric-type="ursass_tube_leaderboard" data-rubric-title="Ursass Tube leaderboard">
+            <button type="button" class="rubric-edit-btn" data-rubric-edit title="Добавить описание">✏️</button>
             <h3>Ursass Tube leaderboard</h3>
             <p id="tube-lb-status" class="hint">Загрузка...</p>
             <div id="tube-leaderboard-list" class="tube-leaderboard-list"></div>
             <button type="button" id="tube-lb-reload">Обновить</button>
+            <p class="rubric-description" data-rubric-description></p>
           </div>
         </div>
       </section>
@@ -306,6 +320,34 @@
           <code>*speak_pause 100</code>.
         </p>
         <ul id="commands-list" class="commands-list"></ul>
+      </div>
+    </div>
+
+    <div id="rubric-editor-overlay" class="commands-overlay">
+      <div class="commands-modal rubric-editor-modal">
+        <div class="commands-modal-head">
+          <h3 id="rubric-editor-title">Описание рубрики</h3>
+          <button type="button" id="rubric-editor-close">Закрыть</button>
+        </div>
+        <label>
+          Описание
+          <textarea id="rubric-editor-text" rows="6" placeholder="Введите описание рубрики"></textarea>
+        </label>
+        <div class="row-actions">
+          <button type="button" id="rubric-editor-save">Сохранить</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="rubric-view-overlay" class="commands-overlay">
+      <div class="commands-modal rubric-view-modal">
+        <div class="commands-modal-head">
+          <h3 id="rubric-view-title"></h3>
+          <button type="button" id="rubric-view-close">Закрыть</button>
+        </div>
+        <div id="rubric-view-frame" class="rubric-view-frame">
+          <p id="rubric-view-content"></p>
+        </div>
       </div>
     </div>
     <script src="app.js"></script>
