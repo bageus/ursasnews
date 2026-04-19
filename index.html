@@ -182,6 +182,46 @@
                 </div>
               </div>
             </div>
+            <div class="settings-block">
+              <h4>Координаты на сцене (точная привязка)</h4>
+              <div class="settings-grid scene-coords-grid">
+                <label>
+                  Изображение: X (%)
+                  <input type="number" id="board-slot-x" min="0" max="100" step="0.1" value="16" />
+                </label>
+                <label>
+                  Изображение: Y (%)
+                  <input type="number" id="board-slot-y" min="0" max="100" step="0.1" value="18" />
+                </label>
+                <label>
+                  Изображение: ширина (%)
+                  <input type="number" id="board-slot-width" min="1" max="100" step="0.1" value="68" />
+                </label>
+                <label>
+                  Изображение: высота (%)
+                  <input type="number" id="board-slot-height" min="1" max="100" step="0.1" value="61" />
+                </label>
+                <label>
+                  Заголовок: X (%)
+                  <input type="number" id="board-title-x" min="0" max="100" step="0.1" value="51" />
+                </label>
+                <label>
+                  Заголовок: Y (%)
+                  <input type="number" id="board-title-y" min="0" max="100" step="0.1" value="34" />
+                </label>
+                <label>
+                  Заголовок: ширина (%)
+                  <input type="number" id="board-title-width" min="1" max="100" step="0.1" value="36" />
+                </label>
+                <label>
+                  Заголовок: размер (px)
+                  <input type="number" id="board-title-size" min="8" max="120" step="1" value="40" />
+                </label>
+                <div class="board-image-position-readout-wrap">
+                  <span id="scene-coords-readout" class="hint">image: x 16%, y 18%, w 68%, h 61% · title: x 51%, y 34%, w 36%, size 40px</span>
+                </div>
+              </div>
+            </div>
             <label>
               <span class="label-row">
                 Интро

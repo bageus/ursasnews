@@ -415,7 +415,7 @@ button:hover {
   color: #fff6cf;
   text-align: center;
   font-family: 'Arial Black', Impact, 'Montserrat', sans-serif;
-  font-size: clamp(8px, 1.4vw, 11px);
+  font-size: var(--board-title-size, clamp(8px, 1.4vw, 11px));
   font-weight: 900;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -473,6 +473,7 @@ button:hover {
 .board-image-position-readout-wrap {
   display: flex;
   align-items: end;
+  grid-column: 1 / -1;
 }
 
 .news-item-actions {
