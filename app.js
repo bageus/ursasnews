@@ -280,6 +280,26 @@ function setBoardContent(title = '', imageData = '', isNewsReading = false) {
   }
 }
 
+function applySceneLayoutVariables(node, settings, titleScale = 1) {
+  if (!node || !settings) {
+    return;
+  }
+  const { imageX, imageY, imageWidth, imageHeight, titleX, titleY, titleWidth, titleSize } = settings;
+  const imageRight = Math.max(0, 100 - imageX - imageWidth);
+  const imageBottom = Math.max(0, 100 - imageY - imageHeight);
+  const imageInset = `${imageY}% ${imageRight}% ${imageBottom}% ${imageX}%`;
+  node.style.setProperty('--board-image-slot-inset', imageInset);
+  node.style.setProperty('--board-title-top', `${titleY}%`);
+  node.style.setProperty('--board-title-left', `${titleX}%`);
+  node.style.setProperty('--board-title-width', `${titleWidth}%`);
+  node.style.setProperty('--board-title-size', `${Math.max(8, Math.round(titleSize * titleScale))}px`);
+}
+
+function applySceneSettingsToMainStage(settings = defaultNewsSceneSettings) {
+  applyImageRenderToNode(boardNewsImagePreview, settings);
+  applySceneLayoutVariables(boardLayer, settings, 0.5);
+}
+
 function transliterateRuToEn(value) {
   const map = {
     а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ё: 'e', ж: 'zh', з: 'z', и: 'i', й: 'y',
@@ -328,15 +348,7 @@ function clampNumber(value, min, max, fallback) {
 }
 
 function applySceneLayoutToPreviewNode(preview, settings) {
-  const { imageX, imageY, imageWidth, imageHeight, titleX, titleY, titleWidth, titleSize } = settings;
-  const imageRight = Math.max(0, 100 - imageX - imageWidth);
-  const imageBottom = Math.max(0, 100 - imageY - imageHeight);
-  const imageInset = `${imageY}% ${imageRight}% ${imageBottom}% ${imageX}%`;
-  preview.style.setProperty('--board-image-slot-inset', imageInset);
-  preview.style.setProperty('--board-title-top', `${titleY}%`);
-  preview.style.setProperty('--board-title-left', `${titleX}%`);
-  preview.style.setProperty('--board-title-width', `${titleWidth}%`);
-  preview.style.setProperty('--board-title-size', `${Math.max(8, Math.round(titleSize * 0.35))}px`);
+  applySceneLayoutVariables(preview, settings, 0.35);
 }
 
 function updateOffsetByDragDelta(startValue, deltaPixels, sizePixels) {
@@ -430,6 +442,7 @@ async function fitImageToBoardSlot(file, settings = defaultNewsSceneSettings) {
 
 function resetBoardContent() {
   setBoardContent('URSAS NEWS', '', false);
+  applySceneSettingsToMainStage(defaultNewsSceneSettings);
 }
 
 function scheduleBoardNewsBySpeech(totalMs) {
@@ -456,7 +469,10 @@ function scheduleBoardNewsBySpeech(totalMs) {
 
     const startTimer = setTimeout(() => {
       if (part.type === 'news') {
+        const approvedFrame = Array.isArray(part.scene_frames) ? part.scene_frames[part.approved_scene_index] : null;
+        const activeSceneSettings = approvedFrame?.settings || part.scene_settings || defaultNewsSceneSettings;
         setBoardContent(part.title || 'URSAS NEWS', part.image_data || '', true);
+        applySceneSettingsToMainStage(activeSceneSettings);
       } else {
         resetBoardContent();
       }
@@ -551,16 +567,23 @@ function updateSceneSubtitles(currentText = '', nextText = '', forceClear = fals
 }
 
 function setBoardFront() {
+  boardLayer.classList.add('is-front');
   boardImageSlot.classList.add('is-front');
 }
 
 function setBoardBack() {
+  boardLayer.classList.remove('is-front');
   boardImageSlot.classList.remove('is-front');
 }
 
 function clearSubtitleTimers() {
   subtitleTimerIds.forEach((id) => clearTimeout(id));
   subtitleTimerIds = [];
+}
+
+function showBaseSubtitlePreview() {
+  const intro = document.getElementById('intro-text').value.trim();
+  updateSceneSubtitles(intro || 'Текст субтитров', '');
 }
 
 function splitSentences(text) {
@@ -828,9 +851,12 @@ function addSpeechNewsItem(initialValue = '') {
   function rebuildSceneFrames() {
     const previousFrame = getSelectedFrame();
     const actions = getSceneActionsForNews(textarea.value);
+    const baseSettings = wrapper._sceneFrames[0]?.settings
+      ? { ...wrapper._sceneFrames[0].settings }
+      : { ...defaultNewsSceneSettings };
     const nextFrames = [{ atMs: 0, type: 'start' }, ...actions].map((frame) => {
       const found = wrapper._sceneFrames.find((item) => item.atMs === frame.atMs && item.type === frame.type);
-      return { ...frame, settings: found?.settings ? { ...found.settings } : { ...defaultNewsSceneSettings } };
+      return { ...frame, settings: found?.settings ? { ...found.settings } : { ...baseSettings } };
     });
     wrapper._sceneFrames = nextFrames;
     const prevIndex = nextFrames.findIndex((frame) => frame.atMs === previousFrame?.atMs && frame.type === previousFrame?.type);
@@ -1277,7 +1303,7 @@ function stopMouthPreview() {
   setNeutralMouth();
   setBoardBack();
   resetBoardContent();
-  updateSceneSubtitles('', '', true);
+  showBaseSubtitlePreview();
 }
 
 function startMouthPreview() {
@@ -1496,12 +1522,12 @@ commandsOverlay.addEventListener('click', (event) => {
     closeCommandsOverlay();
   }
 });
-document.getElementById('episode-subtitles').addEventListener('change', () => updateSceneSubtitles());
-document.getElementById('subtitle-font-family').addEventListener('input', () => updateSceneSubtitles());
-subtitleBoldInput.addEventListener('change', () => updateSceneSubtitles());
-document.getElementById('subtitle-font-size').addEventListener('input', () => updateSceneSubtitles());
-document.getElementById('intro-text').addEventListener('input', () => updateSceneSubtitles());
-document.getElementById('outro-text').addEventListener('input', () => updateSceneSubtitles());
+document.getElementById('episode-subtitles').addEventListener('change', showBaseSubtitlePreview);
+document.getElementById('subtitle-font-family').addEventListener('input', showBaseSubtitlePreview);
+subtitleBoldInput.addEventListener('change', showBaseSubtitlePreview);
+document.getElementById('subtitle-font-size').addEventListener('input', showBaseSubtitlePreview);
+document.getElementById('intro-text').addEventListener('input', showBaseSubtitlePreview);
+document.getElementById('outro-text').addEventListener('input', showBaseSubtitlePreview);
 subtitleJoystick.addEventListener('click', (event) => {
   const button = event.target.closest('[data-move]');
   if (!button) return;
@@ -1527,6 +1553,8 @@ fillRubricSelect();
 addRubricButton.disabled = true;
 renderCommandsHelp();
 applySubtitlePosition();
+applySceneSettingsToMainStage(defaultNewsSceneSettings);
+showBaseSubtitlePreview();
 if (document.getElementById('rubrics').classList.contains('is-active') || !tubeLeaderboardLoaded) {
   loadTubeLeaderboard();
 }

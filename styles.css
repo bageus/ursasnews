@@ -228,7 +228,7 @@ button:hover {
 }
 
 .board-layer.is-front {
-  z-index: 9;
+  z-index: 999;
 }
 
 .board-base {
@@ -268,7 +268,7 @@ button:hover {
 }
 
 .board-image-slot.is-front {
-  z-index: 20;
+  z-index: 1000;
 }
 
 .board-news-title {
