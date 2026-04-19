@@ -228,7 +228,7 @@ button:hover {
 }
 
 .board-layer.is-front {
-  z-index: 9;
+  z-index: 999;
 }
 
 .board-base {
@@ -265,6 +265,10 @@ button:hover {
   inset: var(--board-image-slot-inset, 18% 16% 21% 16%);
   overflow: hidden;
   border-radius: 6px;
+}
+
+.board-image-slot.is-front {
+  z-index: 1000;
 }
 
 .board-news-title {
@@ -536,6 +540,11 @@ button:hover {
   display: flex;
   align-items: end;
   grid-column: 1 / -1;
+}
+
+.row-approve-scene.is-active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px rgba(142, 227, 79, 0.3) inset;
 }
 
 .news-item-actions {
