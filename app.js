@@ -240,7 +240,7 @@ function collectSpeechNewsItems() {
         image_data,
         scene_settings: row._sceneSettings || { ...defaultNewsSceneSettings },
         scene_frames: Array.isArray(row._sceneFrames) ? row._sceneFrames : [],
-        approved_scene_index: Number.isInteger(row._approvedSceneIndex) ? row._approvedSceneIndex : 0,
+        approved_scene_index: Number.isInteger(row._approvedSceneIndex) ? row._approvedSceneIndex : null,
       };
     })
     .filter((item) => item.title || item.text || item.link || item.image_data);
@@ -807,11 +807,20 @@ function addSpeechNewsItem(initialValue = '') {
       sceneReadoutElement.textContent = `align:${settings.imageAlign || 'center'}, x:${settings.offsetX}, y:${settings.offsetY}, zoom:${settings.zoom || 100}%`;
     }
     const approveStatusElement = sceneSettingsPanel.querySelector('.row-approve-status');
+    const approveButton = sceneSettingsPanel.querySelector('.row-approve-scene');
     if (approveStatusElement) {
-      approveStatusElement.textContent =
-        wrapper._approvedSceneIndex === wrapper._selectedSceneIndex
-          ? 'Сцена согласована и будет использована в итоговом рендере.'
-          : `Согласована сцена: t=${((wrapper._sceneFrames[wrapper._approvedSceneIndex]?.atMs || 0) / 1000).toFixed(1)}s`;
+      if (!Number.isInteger(wrapper._approvedSceneIndex)) {
+        approveStatusElement.textContent = 'Сцена не согласована.';
+      } else if (wrapper._approvedSceneIndex === wrapper._selectedSceneIndex) {
+        approveStatusElement.textContent = 'Сцена согласована и будет использована в итоговом рендере.';
+      } else {
+        approveStatusElement.textContent = `Согласована сцена: t=${((wrapper._sceneFrames[wrapper._approvedSceneIndex]?.atMs || 0) / 1000).toFixed(1)}s`;
+      }
+    }
+    if (approveButton) {
+      const isSelectedApproved = wrapper._approvedSceneIndex === wrapper._selectedSceneIndex;
+      approveButton.textContent = isSelectedApproved ? 'Unapprove сцену' : 'Approve сцену';
+      approveButton.classList.toggle('is-active', isSelectedApproved);
     }
     wrapper._sceneSettings = { ...settings };
   }
@@ -826,8 +835,8 @@ function addSpeechNewsItem(initialValue = '') {
     wrapper._sceneFrames = nextFrames;
     const prevIndex = nextFrames.findIndex((frame) => frame.atMs === previousFrame?.atMs && frame.type === previousFrame?.type);
     wrapper._selectedSceneIndex = prevIndex >= 0 ? prevIndex : 0;
-    if (!Number.isInteger(wrapper._approvedSceneIndex) || wrapper._approvedSceneIndex >= nextFrames.length) {
-      wrapper._approvedSceneIndex = 0;
+    if (Number.isInteger(wrapper._approvedSceneIndex) && wrapper._approvedSceneIndex >= nextFrames.length) {
+      wrapper._approvedSceneIndex = null;
     }
   }
 
@@ -852,7 +861,7 @@ function addSpeechNewsItem(initialValue = '') {
 
   const counter = document.createElement('div');
   counter.className = 'news-item-counter';
-  wrapper._approvedSceneIndex = 0;
+  wrapper._approvedSceneIndex = null;
 
   const actionsRow = document.createElement('div');
   actionsRow.className = 'news-item-actions';
@@ -917,7 +926,11 @@ function addSpeechNewsItem(initialValue = '') {
     });
   });
   getControl('.row-approve-scene').addEventListener('click', () => {
-    wrapper._approvedSceneIndex = wrapper._selectedSceneIndex;
+    if (wrapper._approvedSceneIndex === wrapper._selectedSceneIndex) {
+      wrapper._approvedSceneIndex = null;
+    } else {
+      wrapper._approvedSceneIndex = wrapper._selectedSceneIndex;
+    }
     applySelectedFrameToMainPreview();
     renderNewsSceneTimeline();
   });

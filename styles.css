@@ -542,6 +542,11 @@ button:hover {
   grid-column: 1 / -1;
 }
 
+.row-approve-scene.is-active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px rgba(142, 227, 79, 0.3) inset;
+}
+
 .news-item-actions {
   grid-column: 1 / -1;
   display: flex;
