@@ -61,6 +61,7 @@ const boardNewsMode = document.getElementById('board-news-mode');
 const boardHeadBaseLayer = document.getElementById('board-head-base-layer');
 const boardImageBaseLayer = document.getElementById('board-image-base-layer');
 const boardImageSlot = document.getElementById('board-image-slot');
+const boardImageSlotHomeParent = boardImageSlot?.parentElement || null;
 const boardNewsTitle = document.getElementById('board-news-title');
 const boardNewsImagePreview = document.getElementById('board-news-image-preview');
 const tubeLeaderboardList = document.getElementById('tube-leaderboard-list');
@@ -102,10 +103,10 @@ const boardSlotConfig = {
 
 const defaultNewsSceneSettings = {
   fitMode: 'cover',
+  imageAlign: 'center',
   offsetX: 0,
   offsetY: 0,
-  scaleWidth: 100,
-  scaleHeight: 100,
+  zoom: 100,
   imageX: 16,
   imageY: 18,
   imageWidth: 68,
@@ -146,7 +147,7 @@ const commandHelpItems = [
   ['*emotion_smile', 'Эмоция улыбка (ассеты позже).'],
   ['*emotion_surprise', 'Эмоция удивление (ассеты позже).'],
   ['*emotion_doubt', 'Эмоция сомнение (ассеты позже).'],
-  ['*board_news_front 0', 'Перенести доску с новостью вперед, 0 = без ограничения по времени.'],
+  ['*board_news_front 0', 'Перенести слой изображения новости впереди всех остальных слоев, 0 = без ограничения по времени.'],
   ['*board_news_back 0', 'Перенести доску с новостью назад, 0 = базовое состояние.'],
 ];
 
@@ -240,6 +241,7 @@ function collectSpeechNewsItems() {
         image_data,
         scene_settings: row._sceneSettings || { ...defaultNewsSceneSettings },
         scene_frames: Array.isArray(row._sceneFrames) ? row._sceneFrames : [],
+        approved_scene_index: Number.isInteger(row._approvedSceneIndex) ? row._approvedSceneIndex : null,
       };
     })
     .filter((item) => item.title || item.text || item.link || item.image_data);
@@ -279,6 +281,26 @@ function setBoardContent(title = '', imageData = '', isNewsReading = false) {
   }
 }
 
+function applySceneLayoutVariables(node, settings, titleScale = 1) {
+  if (!node || !settings) {
+    return;
+  }
+  const { imageX, imageY, imageWidth, imageHeight, titleX, titleY, titleWidth, titleSize } = settings;
+  const imageRight = Math.max(0, 100 - imageX - imageWidth);
+  const imageBottom = Math.max(0, 100 - imageY - imageHeight);
+  const imageInset = `${imageY}% ${imageRight}% ${imageBottom}% ${imageX}%`;
+  node.style.setProperty('--board-image-slot-inset', imageInset);
+  node.style.setProperty('--board-title-top', `${titleY}%`);
+  node.style.setProperty('--board-title-left', `${titleX}%`);
+  node.style.setProperty('--board-title-width', `${titleWidth}%`);
+  node.style.setProperty('--board-title-size', `${Math.max(8, Math.round(titleSize * titleScale))}px`);
+}
+
+function applySceneSettingsToMainStage(settings = defaultNewsSceneSettings) {
+  applyImageRenderToNode(boardNewsImagePreview, settings);
+  applySceneLayoutVariables(boardLayer, settings, 0.5);
+}
+
 function transliterateRuToEn(value) {
   const map = {
     а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ё: 'e', ж: 'zh', з: 'z', и: 'i', й: 'y',
@@ -310,9 +332,12 @@ function applyImageRenderToNode(node, settings = defaultNewsSceneSettings) {
   if (!node) {
     return;
   }
-  const { fitMode, offsetX, offsetY } = settings;
+  const { fitMode, imageAlign, offsetX, offsetY, zoom } = settings;
+  const xBase = imageAlign === 'left' ? '0%' : '50%';
   node.style.objectFit = fitMode;
-  node.style.objectPosition = `calc(50% + ${offsetX}%) calc(50% + ${offsetY}%)`;
+  node.style.objectPosition = `calc(${xBase} + ${offsetX}%) calc(50% + ${offsetY}%)`;
+  node.style.transformOrigin = imageAlign === 'left' ? 'left center' : 'center center';
+  node.style.transform = `scale(${Math.max(10, Number(zoom) || 100) / 100})`;
 }
 
 function clampNumber(value, min, max, fallback) {
@@ -324,15 +349,7 @@ function clampNumber(value, min, max, fallback) {
 }
 
 function applySceneLayoutToPreviewNode(preview, settings) {
-  const { imageX, imageY, imageWidth, imageHeight, titleX, titleY, titleWidth, titleSize } = settings;
-  const imageRight = Math.max(0, 100 - imageX - imageWidth);
-  const imageBottom = Math.max(0, 100 - imageY - imageHeight);
-  const imageInset = `${imageY}% ${imageRight}% ${imageBottom}% ${imageX}%`;
-  preview.style.setProperty('--board-image-slot-inset', imageInset);
-  preview.style.setProperty('--board-title-top', `${titleY}%`);
-  preview.style.setProperty('--board-title-left', `${titleX}%`);
-  preview.style.setProperty('--board-title-width', `${titleWidth}%`);
-  preview.style.setProperty('--board-title-size', `${Math.max(8, Math.round(titleSize * 0.35))}px`);
+  applySceneLayoutVariables(preview, settings, 0.35);
 }
 
 function updateOffsetByDragDelta(startValue, deltaPixels, sizePixels) {
@@ -406,7 +423,7 @@ async function fitImageToBoardSlot(file, settings = defaultNewsSceneSettings) {
   const sourceImage = await loadImageFromDataUrl(dataUrl);
   const format = episodeFormatInput.value === '1920x1080' ? '1920x1080' : '1080x1920';
   const slot = boardSlotConfig[format];
-  const { fitMode, offsetX, offsetY, scaleWidth, scaleHeight } = settings;
+  const { fitMode, offsetX, offsetY } = settings;
   const targetWidth = slot?.width || 900;
   const targetHeight = slot?.height || 520;
 
@@ -426,6 +443,7 @@ async function fitImageToBoardSlot(file, settings = defaultNewsSceneSettings) {
 
 function resetBoardContent() {
   setBoardContent('URSAS NEWS', '', false);
+  applySceneSettingsToMainStage(defaultNewsSceneSettings);
 }
 
 function scheduleBoardNewsBySpeech(totalMs) {
@@ -452,7 +470,10 @@ function scheduleBoardNewsBySpeech(totalMs) {
 
     const startTimer = setTimeout(() => {
       if (part.type === 'news') {
+        const approvedFrame = Array.isArray(part.scene_frames) ? part.scene_frames[part.approved_scene_index] : null;
+        const activeSceneSettings = approvedFrame?.settings || part.scene_settings || defaultNewsSceneSettings;
         setBoardContent(part.title || 'URSAS NEWS', part.image_data || '', true);
+        applySceneSettingsToMainStage(activeSceneSettings);
       } else {
         resetBoardContent();
       }
@@ -548,10 +569,18 @@ function updateSceneSubtitles(currentText = '', nextText = '', forceClear = fals
 
 function setBoardFront() {
   boardLayer.classList.add('is-front');
+  if (boardImageSlot.parentElement !== boardNewsMode) {
+    boardNewsMode.appendChild(boardImageSlot);
+  }
+  boardImageSlot.classList.add('is-front');
 }
 
 function setBoardBack() {
   boardLayer.classList.remove('is-front');
+  if (boardImageSlotHomeParent && boardImageSlot.parentElement !== boardImageSlotHomeParent) {
+    boardImageSlotHomeParent.insertBefore(boardImageSlot, boardImageBaseLayer);
+  }
+  boardImageSlot.classList.remove('is-front');
 }
 
 function clearSubtitleTimers() {
@@ -559,27 +588,66 @@ function clearSubtitleTimers() {
   subtitleTimerIds = [];
 }
 
+function showBaseSubtitlePreview() {
+  const intro = document.getElementById('intro-text').value.trim();
+  updateSceneSubtitles(intro || 'Текст субтитров', '');
+}
+
 function splitSentences(text) {
   return (text.match(/[^.!?]+[.!?]?/g) || []).map((s) => s.trim()).filter(Boolean);
+}
+
+function splitSubtitleChunks(text, maxWords = 10) {
+  const tokens = (text || '').match(/[\p{L}\p{N}-]+|[.,!?;:]/gu) || [];
+  const chunks = [];
+  let current = [];
+  let wordsCount = 0;
+
+  tokens.forEach((token) => {
+    const isPunctuation = /^[.,!?;:]$/.test(token);
+    if (isPunctuation) {
+      if (current.length > 0) {
+        current[current.length - 1] = `${current[current.length - 1]}${token}`;
+        chunks.push(current.join(' '));
+        current = [];
+        wordsCount = 0;
+      }
+      return;
+    }
+
+    current.push(token);
+    wordsCount += 1;
+    if (wordsCount >= maxWords) {
+      chunks.push(current.join(' '));
+      current = [];
+      wordsCount = 0;
+    }
+  });
+
+  if (current.length > 0) {
+    chunks.push(current.join(' '));
+  }
+
+  return chunks;
 }
 
 function scheduleSubtitles(text, totalMs) {
   clearSubtitleTimers();
 
-  const sentences = splitSentences(text);
-  if (sentences.length === 0) {
+  const chunks = splitSubtitleChunks(text, 10);
+  if (chunks.length === 0) {
     updateSceneSubtitles('', '');
     return;
   }
 
-  const wordCounts = sentences.map((sentence) => Math.max(1, getWordsCount(sentence)));
+  const wordCounts = chunks.map((chunk) => Math.max(1, getWordsCount(chunk)));
   const totalWords = wordCounts.reduce((sum, count) => sum + count, 0);
   let cursor = 0;
 
-  sentences.forEach((sentence, index) => {
-    const nextSentence = sentences[index + 1] || '';
+  chunks.forEach((chunk, index) => {
+    const nextChunk = chunks[index + 1] || '';
     const id = setTimeout(() => {
-      updateSceneSubtitles(sentence, nextSentence);
+      updateSceneSubtitles(chunk, nextChunk);
     }, cursor);
     subtitleTimerIds.push(id);
 
@@ -724,19 +792,23 @@ function addSpeechNewsItem(initialValue = '') {
       <label>Режим подгонки
         <select class="row-fit-mode"><option value="cover">Cover</option><option value="contain">Contain</option></select>
       </label>
-      <label>Смещение X (−100..100)<input type="range" class="row-offset-x" min="-100" max="100" step="1" value="0" /></label>
-      <label>Смещение Y (−100..100)<input type="range" class="row-offset-y" min="-100" max="100" step="1" value="0" /></label>
-      <label>Ширина image (%)<input type="range" class="row-scale-w" min="20" max="300" step="1" value="100" /></label>
-      <label>Высота image (%)<input type="range" class="row-scale-h" min="20" max="300" step="1" value="100" /></label>
-      <label>Image X (%)<input type="number" class="row-image-x" min="0" max="100" step="0.1" value="16" /></label>
-      <label>Image Y (%)<input type="number" class="row-image-y" min="0" max="100" step="0.1" value="18" /></label>
+      <label>Выравнивание изображения
+        <select class="row-image-align"><option value="center">По центру</option><option value="left">По левому краю</option></select>
+      </label>
+      <label>Смещение X (−100..100)<input type="number" class="row-offset-x" min="-100" max="100" step="1" value="0" /></label>
+      <label>Смещение Y (−100..100)<input type="number" class="row-offset-y" min="-100" max="100" step="1" value="0" /></label>
+      <label>Zoom изображения (%)<input type="number" class="row-zoom" min="10" max="300" step="1" value="100" /></label>
+      <label>Image X (%)<input type="number" class="row-image-x" min="-100" max="100" step="0.1" value="16" /></label>
+      <label>Image Y (%)<input type="number" class="row-image-y" min="-100" max="100" step="0.1" value="18" /></label>
       <label>Image width (%)<input type="number" class="row-image-w" min="1" max="100" step="0.1" value="68" /></label>
       <label>Image height (%)<input type="number" class="row-image-h" min="1" max="100" step="0.1" value="61" /></label>
-      <label>Title X (%)<input type="number" class="row-title-x" min="0" max="100" step="0.1" value="51" /></label>
-      <label>Title Y (%)<input type="number" class="row-title-y" min="0" max="100" step="0.1" value="34" /></label>
+      <label>Title X (%)<input type="number" class="row-title-x" min="-100" max="100" step="0.1" value="51" /></label>
+      <label>Title Y (%)<input type="number" class="row-title-y" min="-100" max="100" step="0.1" value="34" /></label>
       <label>Title width (%)<input type="number" class="row-title-w" min="1" max="100" step="0.1" value="36" /></label>
       <label>Title size (px)<input type="number" class="row-title-size" min="8" max="120" step="1" value="40" /></label>
+      <div class="board-image-position-readout-wrap"><button type="button" class="row-approve-scene">Approve сцену</button></div>
       <div class="board-image-position-readout-wrap"><span class="hint row-scene-readout"></span></div>
+      <div class="board-image-position-readout-wrap"><span class="hint row-approve-status"></span></div>
     </div>
   `;
   const getControl = (selector) => sceneSettingsPanel.querySelector(selector);
@@ -747,10 +819,10 @@ function addSpeechNewsItem(initialValue = '') {
 
   function setControlsFromSettings(settings) {
     getControl('.row-fit-mode').value = settings.fitMode || 'cover';
+    getControl('.row-image-align').value = settings.imageAlign === 'left' ? 'left' : 'center';
     getControl('.row-offset-x').value = String(settings.offsetX ?? 0);
     getControl('.row-offset-y').value = String(settings.offsetY ?? 0);
-    getControl('.row-scale-w').value = String(settings.scaleWidth ?? 100);
-    getControl('.row-scale-h').value = String(settings.scaleHeight ?? 100);
+    getControl('.row-zoom').value = String(settings.zoom ?? 100);
     getControl('.row-image-x').value = String(settings.imageX ?? 16);
     getControl('.row-image-y').value = String(settings.imageY ?? 18);
     getControl('.row-image-w').value = String(settings.imageWidth ?? 68);
@@ -764,16 +836,16 @@ function addSpeechNewsItem(initialValue = '') {
   function readSettingsFromControls() {
     return {
       fitMode: getControl('.row-fit-mode').value === 'contain' ? 'contain' : 'cover',
+      imageAlign: getControl('.row-image-align').value === 'left' ? 'left' : 'center',
       offsetX: clampNumber(getControl('.row-offset-x').value, -100, 100, 0),
       offsetY: clampNumber(getControl('.row-offset-y').value, -100, 100, 0),
-      scaleWidth: clampNumber(getControl('.row-scale-w').value, 20, 300, 100),
-      scaleHeight: clampNumber(getControl('.row-scale-h').value, 20, 300, 100),
-      imageX: clampNumber(getControl('.row-image-x').value, 0, 100, 16),
-      imageY: clampNumber(getControl('.row-image-y').value, 0, 100, 18),
+      zoom: clampNumber(getControl('.row-zoom').value, 10, 300, 100),
+      imageX: clampNumber(getControl('.row-image-x').value, -100, 100, 16),
+      imageY: clampNumber(getControl('.row-image-y').value, -100, 100, 18),
       imageWidth: clampNumber(getControl('.row-image-w').value, 1, 100, 68),
       imageHeight: clampNumber(getControl('.row-image-h').value, 1, 100, 61),
-      titleX: clampNumber(getControl('.row-title-x').value, 0, 100, 51),
-      titleY: clampNumber(getControl('.row-title-y').value, 0, 100, 34),
+      titleX: clampNumber(getControl('.row-title-x').value, -100, 100, 51),
+      titleY: clampNumber(getControl('.row-title-y').value, -100, 100, 34),
       titleWidth: clampNumber(getControl('.row-title-w').value, 1, 100, 36),
       titleSize: clampNumber(getControl('.row-title-size').value, 8, 120, 40),
     };
@@ -796,7 +868,23 @@ function addSpeechNewsItem(initialValue = '') {
     selectedSceneLabel.textContent = `Выбрана сцена: t=${(frame.atMs / 1000).toFixed(frame.atMs % 1000 === 0 ? 0 : 1)}s`;
     const sceneReadoutElement = sceneSettingsPanel.querySelector('.row-scene-readout');
     if (sceneReadoutElement) {
-      sceneReadoutElement.textContent = `x:${settings.offsetX}, y:${settings.offsetY}, w:${settings.scaleWidth}%, h:${settings.scaleHeight}%`;
+      sceneReadoutElement.textContent = `align:${settings.imageAlign || 'center'}, x:${settings.offsetX}, y:${settings.offsetY}, zoom:${settings.zoom || 100}%`;
+    }
+    const approveStatusElement = sceneSettingsPanel.querySelector('.row-approve-status');
+    const approveButton = sceneSettingsPanel.querySelector('.row-approve-scene');
+    if (approveStatusElement) {
+      if (!Number.isInteger(wrapper._approvedSceneIndex)) {
+        approveStatusElement.textContent = 'Сцена не согласована.';
+      } else if (wrapper._approvedSceneIndex === wrapper._selectedSceneIndex) {
+        approveStatusElement.textContent = 'Сцена согласована и будет использована в итоговом рендере.';
+      } else {
+        approveStatusElement.textContent = `Согласована сцена: t=${((wrapper._sceneFrames[wrapper._approvedSceneIndex]?.atMs || 0) / 1000).toFixed(1)}s`;
+      }
+    }
+    if (approveButton) {
+      const isSelectedApproved = wrapper._approvedSceneIndex === wrapper._selectedSceneIndex;
+      approveButton.textContent = isSelectedApproved ? 'Unapprove сцену' : 'Approve сцену';
+      approveButton.classList.toggle('is-active', isSelectedApproved);
     }
     wrapper._sceneSettings = { ...settings };
   }
@@ -804,13 +892,19 @@ function addSpeechNewsItem(initialValue = '') {
   function rebuildSceneFrames() {
     const previousFrame = getSelectedFrame();
     const actions = getSceneActionsForNews(textarea.value);
+    const baseSettings = wrapper._sceneFrames[0]?.settings
+      ? { ...wrapper._sceneFrames[0].settings }
+      : { ...defaultNewsSceneSettings };
     const nextFrames = [{ atMs: 0, type: 'start' }, ...actions].map((frame) => {
       const found = wrapper._sceneFrames.find((item) => item.atMs === frame.atMs && item.type === frame.type);
-      return { ...frame, settings: found?.settings ? { ...found.settings } : { ...defaultNewsSceneSettings } };
+      return { ...frame, settings: found?.settings ? { ...found.settings } : { ...baseSettings } };
     });
     wrapper._sceneFrames = nextFrames;
     const prevIndex = nextFrames.findIndex((frame) => frame.atMs === previousFrame?.atMs && frame.type === previousFrame?.type);
     wrapper._selectedSceneIndex = prevIndex >= 0 ? prevIndex : 0;
+    if (Number.isInteger(wrapper._approvedSceneIndex) && wrapper._approvedSceneIndex >= nextFrames.length) {
+      wrapper._approvedSceneIndex = null;
+    }
   }
 
   function renderNewsSceneTimeline() {
@@ -834,6 +928,7 @@ function addSpeechNewsItem(initialValue = '') {
 
   const counter = document.createElement('div');
   counter.className = 'news-item-counter';
+  wrapper._approvedSceneIndex = null;
 
   const actionsRow = document.createElement('div');
   actionsRow.className = 'news-item-actions';
@@ -896,6 +991,15 @@ function addSpeechNewsItem(initialValue = '') {
       applySelectedFrameToMainPreview();
       renderNewsSceneTimeline();
     });
+  });
+  getControl('.row-approve-scene').addEventListener('click', () => {
+    if (wrapper._approvedSceneIndex === wrapper._selectedSceneIndex) {
+      wrapper._approvedSceneIndex = null;
+    } else {
+      wrapper._approvedSceneIndex = wrapper._selectedSceneIndex;
+    }
+    applySelectedFrameToMainPreview();
+    renderNewsSceneTimeline();
   });
 
   wrapper.append(label, titleInput, selectedSceneWrap, sceneTimeline, sceneSettingsPanel, textarea, counter, linkInput, imageInput, imagePreview, actionsRow);
@@ -1240,7 +1344,7 @@ function stopMouthPreview() {
   setNeutralMouth();
   setBoardBack();
   resetBoardContent();
-  updateSceneSubtitles('', '', true);
+  showBaseSubtitlePreview();
 }
 
 function startMouthPreview() {
@@ -1393,12 +1497,22 @@ function buildEpisodeScript(mode = 'preview') {
     intro,
     anchor_speech_text: speechText,
     anchor_speech_news: speechNews.map((item) => {
+      const approvedFrame = Array.isArray(item.scene_frames) ? item.scene_frames[item.approved_scene_index] : null;
       const sceneSettings = item.scene_settings || { ...defaultNewsSceneSettings };
+      const finalSceneSettings = mode === 'final' && approvedFrame?.settings ? approvedFrame.settings : sceneSettings;
       return {
         ...item,
         title: mode === 'preview' ? '' : item.title,
-        scene_settings: sceneSettings,
-        scene_keyframes: (item.scene_frames || []).map((frame) => ({
+        scene_settings: finalSceneSettings,
+        approved_scene: approvedFrame
+          ? {
+              index: item.approved_scene_index || 0,
+              at_ms: approvedFrame.atMs || 0,
+              type: approvedFrame.type || 'start',
+              settings: approvedFrame.settings || { ...defaultNewsSceneSettings },
+            }
+          : null,
+        scene_keyframes: (mode === 'final' && approvedFrame ? [approvedFrame] : (item.scene_frames || [])).map((frame) => ({
           at_ms: frame.atMs || 0,
           type: frame.type || 'start',
           duration_ms: frame.duration_ms || 0,
@@ -1449,12 +1563,12 @@ commandsOverlay.addEventListener('click', (event) => {
     closeCommandsOverlay();
   }
 });
-document.getElementById('episode-subtitles').addEventListener('change', () => updateSceneSubtitles());
-document.getElementById('subtitle-font-family').addEventListener('input', () => updateSceneSubtitles());
-subtitleBoldInput.addEventListener('change', () => updateSceneSubtitles());
-document.getElementById('subtitle-font-size').addEventListener('input', () => updateSceneSubtitles());
-document.getElementById('intro-text').addEventListener('input', () => updateSceneSubtitles());
-document.getElementById('outro-text').addEventListener('input', () => updateSceneSubtitles());
+document.getElementById('episode-subtitles').addEventListener('change', showBaseSubtitlePreview);
+document.getElementById('subtitle-font-family').addEventListener('input', showBaseSubtitlePreview);
+subtitleBoldInput.addEventListener('change', showBaseSubtitlePreview);
+document.getElementById('subtitle-font-size').addEventListener('input', showBaseSubtitlePreview);
+document.getElementById('intro-text').addEventListener('input', showBaseSubtitlePreview);
+document.getElementById('outro-text').addEventListener('input', showBaseSubtitlePreview);
 subtitleJoystick.addEventListener('click', (event) => {
   const button = event.target.closest('[data-move]');
   if (!button) return;
@@ -1480,6 +1594,8 @@ fillRubricSelect();
 addRubricButton.disabled = true;
 renderCommandsHelp();
 applySubtitlePosition();
+applySceneSettingsToMainStage(defaultNewsSceneSettings);
+showBaseSubtitlePreview();
 if (document.getElementById('rubrics').classList.contains('is-active') || !tubeLeaderboardLoaded) {
   loadTubeLeaderboard();
 }
