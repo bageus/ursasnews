@@ -55,6 +55,15 @@ const boardImageOffsetYInput = document.getElementById('board-image-offset-y');
 const boardImageScaleWidthInput = document.getElementById('board-image-scale-width');
 const boardImageScaleHeightInput = document.getElementById('board-image-scale-height');
 const boardImagePositionReadout = document.getElementById('board-image-position-readout');
+const boardSlotXInput = document.getElementById('board-slot-x');
+const boardSlotYInput = document.getElementById('board-slot-y');
+const boardSlotWidthInput = document.getElementById('board-slot-width');
+const boardSlotHeightInput = document.getElementById('board-slot-height');
+const boardTitleXInput = document.getElementById('board-title-x');
+const boardTitleYInput = document.getElementById('board-title-y');
+const boardTitleWidthInput = document.getElementById('board-title-width');
+const boardTitleSizeInput = document.getElementById('board-title-size');
+const sceneCoordsReadout = document.getElementById('scene-coords-readout');
 const tubeLeaderboardList = document.getElementById('tube-leaderboard-list');
 const tubeLeaderboardStatus = document.getElementById('tube-lb-status');
 const tubeLeaderboardReload = document.getElementById('tube-lb-reload');
@@ -327,6 +336,57 @@ function syncAllNewsScenePreviews() {
       applyImageRenderToNode(row._scenePreviewImage);
     }
   });
+}
+
+function clampNumber(value, min, max, fallback) {
+  const numeric = Number(value);
+  if (Number.isNaN(numeric)) {
+    return fallback;
+  }
+  return Math.max(min, Math.min(max, numeric));
+}
+
+function getSceneLayoutSettings() {
+  const imageX = clampNumber(boardSlotXInput.value, 0, 100, 16);
+  const imageY = clampNumber(boardSlotYInput.value, 0, 100, 18);
+  const imageWidth = clampNumber(boardSlotWidthInput.value, 1, 100, 68);
+  const imageHeight = clampNumber(boardSlotHeightInput.value, 1, 100, 61);
+  const titleX = clampNumber(boardTitleXInput.value, 0, 100, 51);
+  const titleY = clampNumber(boardTitleYInput.value, 0, 100, 34);
+  const titleWidth = clampNumber(boardTitleWidthInput.value, 1, 100, 36);
+  const titleSize = clampNumber(boardTitleSizeInput.value, 8, 120, 40);
+  return { imageX, imageY, imageWidth, imageHeight, titleX, titleY, titleWidth, titleSize };
+}
+
+function updateSceneCoordsReadout() {
+  const { imageX, imageY, imageWidth, imageHeight, titleX, titleY, titleWidth, titleSize } = getSceneLayoutSettings();
+  sceneCoordsReadout.textContent =
+    `image: x ${imageX}%, y ${imageY}%, w ${imageWidth}%, h ${imageHeight}% · ` +
+    `title: x ${titleX}%, y ${titleY}%, w ${titleWidth}%, size ${titleSize}px`;
+}
+
+function applySceneLayoutFromControls() {
+  const { imageX, imageY, imageWidth, imageHeight, titleX, titleY, titleWidth, titleSize } = getSceneLayoutSettings();
+  const imageRight = Math.max(0, 100 - imageX - imageWidth);
+  const imageBottom = Math.max(0, 100 - imageY - imageHeight);
+  const imageInset = `${imageY}% ${imageRight}% ${imageBottom}% ${imageX}%`;
+  boardImageSlot.style.setProperty('--board-image-slot-inset', imageInset);
+  boardLayer.style.setProperty('--board-title-top', `${titleY}%`);
+  boardLayer.style.setProperty('--board-title-left', `${titleX}%`);
+  boardLayer.style.setProperty('--board-title-width', `${titleWidth}%`);
+  boardLayer.style.setProperty('--board-title-size', `${titleSize}px`);
+
+  const rows = speechNewsItems.querySelectorAll('.news-item-row');
+  rows.forEach((row) => {
+    const preview = row.querySelector('.news-scene-preview');
+    if (!preview) return;
+    preview.style.setProperty('--board-image-slot-inset', imageInset);
+    preview.style.setProperty('--board-title-top', `${titleY}%`);
+    preview.style.setProperty('--board-title-left', `${titleX}%`);
+    preview.style.setProperty('--board-title-width', `${titleWidth}%`);
+    preview.style.setProperty('--board-title-size', `${Math.max(8, Math.round(titleSize * 0.35))}px`);
+  });
+  updateSceneCoordsReadout();
 }
 
 function updateOffsetByDragDelta(startValue, deltaPixels, sizePixels) {
@@ -674,7 +734,7 @@ function addSpeechNewsItem(initialValue = '') {
 
   const scenePreviewTitle = document.createElement('div');
   scenePreviewTitle.className = 'news-scene-preview-title';
-  scenePreviewTitle.textContent = normalizeBoardTitle('URSAS NEWS');
+  scenePreviewTitle.textContent = '';
 
   const scenePreviewImageWrap = document.createElement('div');
   scenePreviewImageWrap.className = 'news-scene-preview-image-wrap';
@@ -713,7 +773,7 @@ function addSpeechNewsItem(initialValue = '') {
     updateSceneSubtitles();
   });
   titleInput.addEventListener('input', () => {
-    scenePreviewTitle.textContent = normalizeBoardTitle(titleInput.value.trim() || 'URSAS NEWS');
+    scenePreviewTitle.textContent = '';
     if (activeScenePreviewRow === wrapper) {
       syncSceneFromNewsRow(wrapper);
     }
@@ -971,34 +1031,29 @@ function applySceneLayout(format) {
   const slot = boardSlotConfig[format] || boardSlotConfig['1080x1920'];
   const left = (slot.imageRect.x / slot.asset.width) * 100;
   const top = (slot.imageRect.y / slot.asset.height) * 100;
-  const right = ((slot.asset.width - (slot.imageRect.x + slot.imageRect.width)) / slot.asset.width) * 100;
-  const bottom = ((slot.asset.height - (slot.imageRect.y + slot.imageRect.height)) / slot.asset.height) * 100;
-  boardImageSlot.style.setProperty('--board-image-slot-inset', `${top}% ${right}% ${bottom}% ${left}%`);
-  boardNewsTitle.style.setProperty('--board-title-top', slot.title.top);
-  boardNewsTitle.style.setProperty('--board-title-left', slot.title.left);
-  boardNewsTitle.style.setProperty('--board-title-width', slot.title.width);
-  boardNewsTitle.style.setProperty('--board-title-size', slot.title.size);
+  boardSlotXInput.value = left.toFixed(1);
+  boardSlotYInput.value = top.toFixed(1);
+  boardSlotWidthInput.value = ((slot.imageRect.width / slot.asset.width) * 100).toFixed(1);
+  boardSlotHeightInput.value = ((slot.imageRect.height / slot.asset.height) * 100).toFixed(1);
+  boardTitleXInput.value = String(parseFloat(slot.title.left));
+  boardTitleYInput.value = String(parseFloat(slot.title.top));
+  boardTitleWidthInput.value = String(parseFloat(slot.title.width));
+  boardTitleSizeInput.value = String(parseFloat(slot.title.size));
+
   const rows = speechNewsItems.querySelectorAll('.news-item-row');
   rows.forEach((row) => {
     const preview = row.querySelector('.news-scene-preview');
     const previewBackwall = row.querySelector('.news-scene-preview-layer:nth-child(1)');
     const previewTable = row.querySelector('.news-scene-preview-layer:nth-child(2)');
     const previewBoardBase = row.querySelector('.news-scene-preview-board-base');
-    const previewTitle = row.querySelector('.news-scene-preview-title');
     if (preview) {
       preview.classList.toggle('is-horizontal', isHorizontal);
-      preview.style.setProperty('--board-image-slot-inset', `${top}% ${right}% ${bottom}% ${left}%`);
-      preview.style.setProperty('--board-title-top', slot.title.top);
-      preview.style.setProperty('--board-title-left', slot.title.left);
-      preview.style.setProperty('--board-title-width', slot.title.width);
-    }
-    if (previewTitle) {
-      previewTitle.style.fontSize = slot.title.size;
     }
     if (previewBackwall) previewBackwall.src = sceneBackwallLayer.src;
     if (previewTable) previewTable.src = sceneTableLayer.src;
     if (previewBoardBase) previewBoardBase.src = boardImageBaseLayer.src;
   });
+  applySceneLayoutFromControls();
   updateBoardImagePositionStyle();
 }
 
@@ -1257,6 +1312,7 @@ function buildEpisodeScript(mode = 'preview') {
   const outro = document.getElementById('outro-text').value.trim();
   const speechTimeline = getSpeechTimelineConfig();
   const speechNews = collectSpeechNewsItems();
+  const sceneLayout = getSceneLayoutSettings();
   const rubrics = getSelectedRubrics();
 
   const script = {
@@ -1286,7 +1342,24 @@ function buildEpisodeScript(mode = 'preview') {
     },
     intro,
     anchor_speech_text: speechText,
-    anchor_speech_news: speechNews,
+    anchor_speech_news: speechNews.map((item) => ({
+      ...item,
+      title: mode === 'preview' ? '' : item.title,
+    })),
+    scene_layout: {
+      image_slot: {
+        x_percent: sceneLayout.imageX,
+        y_percent: sceneLayout.imageY,
+        width_percent: sceneLayout.imageWidth,
+        height_percent: sceneLayout.imageHeight,
+      },
+      board_title: {
+        x_percent: sceneLayout.titleX,
+        y_percent: sceneLayout.titleY,
+        width_percent: sceneLayout.titleWidth,
+        font_size_px: sceneLayout.titleSize,
+      },
+    },
     segments: manualNewsQueue.map((news, idx) => ({
       order: idx + 1,
       type: 'news',
@@ -1341,6 +1414,16 @@ boardImageOffsetXInput.addEventListener('input', updateBoardImagePositionStyle);
 boardImageOffsetYInput.addEventListener('input', updateBoardImagePositionStyle);
 boardImageScaleWidthInput.addEventListener('input', updateBoardImagePositionStyle);
 boardImageScaleHeightInput.addEventListener('input', updateBoardImagePositionStyle);
+[
+  boardSlotXInput,
+  boardSlotYInput,
+  boardSlotWidthInput,
+  boardSlotHeightInput,
+  boardTitleXInput,
+  boardTitleYInput,
+  boardTitleWidthInput,
+  boardTitleSizeInput,
+].forEach((input) => input.addEventListener('input', applySceneLayoutFromControls));
 subtitleJoystick.addEventListener('click', (event) => {
   const button = event.target.closest('[data-move]');
   if (!button) return;
