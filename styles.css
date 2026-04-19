@@ -390,6 +390,21 @@ button:hover {
   display: grid;
   gap: 6px;
   color: var(--muted);
+  text-align: left;
+  background: #0f1530;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.news-scene-timeline-item.is-selected {
+  border-color: var(--accent);
+}
+
+.news-scene-selected-wrap {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 6px;
 }
 
 .news-scene-mini {

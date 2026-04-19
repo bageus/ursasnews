@@ -219,7 +219,14 @@ function collectSpeechNewsItems() {
       const link = isValidHttpUrl(rawLink) ? rawLink : '';
       const image_data = row.dataset.imageData || '';
 
-      return { title, text, link, image_data, scene_settings: row._sceneSettings || { ...defaultNewsSceneSettings } };
+      return {
+        title,
+        text,
+        link,
+        image_data,
+        scene_settings: row._sceneSettings || { ...defaultNewsSceneSettings },
+        scene_frames: Array.isArray(row._sceneFrames) ? row._sceneFrames : [],
+      };
     })
     .filter((item) => item.title || item.text || item.link || item.image_data);
 }
@@ -383,14 +390,11 @@ function loadImageFromDataUrl(dataUrl) {
 async function fitImageToBoardSlot(file, settings = defaultNewsSceneSettings) {
   const dataUrl = await readFileAsDataUrl(file);
   const sourceImage = await loadImageFromDataUrl(dataUrl);
-  const MAX_DIMENSION = 2048;
-  if (sourceImage.width <= MAX_DIMENSION && sourceImage.height <= MAX_DIMENSION) {
-    return dataUrl;
-  }
-
-  const downscaleRatio = Math.min(MAX_DIMENSION / sourceImage.width, MAX_DIMENSION / sourceImage.height);
-  const targetWidth = Math.max(1, Math.round(sourceImage.width * downscaleRatio));
-  const targetHeight = Math.max(1, Math.round(sourceImage.height * downscaleRatio));
+  const format = episodeFormatInput.value === '1920x1080' ? '1920x1080' : '1080x1920';
+  const slot = boardSlotConfig[format];
+  const { fitMode, offsetX, offsetY, scaleWidth, scaleHeight } = settings;
+  const targetWidth = slot?.width || 900;
+  const targetHeight = slot?.height || 520;
 
   const canvas = document.createElement('canvas');
   canvas.width = targetWidth;
@@ -595,6 +599,8 @@ function addSpeechNewsItem(initialValue = '') {
 
   const wrapper = document.createElement('div');
   wrapper.className = 'news-item-row';
+  wrapper._sceneFrames = [];
+  wrapper._selectedSceneIndex = 0;
 
   const label = document.createElement('label');
   label.className = 'news-item-label';
@@ -636,57 +642,191 @@ function addSpeechNewsItem(initialValue = '') {
   imagePreview.className = 'news-image-preview';
   imagePreview.alt = 'Превью изображения новости';
 
-  const scenePreview = document.createElement('div');
-  scenePreview.className = 'news-scene-preview';
+  function buildScenePreviewNode(settings) {
+    const preview = document.createElement('div');
+    preview.className = 'news-scene-preview';
+
+    const backwall = document.createElement('img');
+    backwall.className = 'news-scene-preview-layer';
+    backwall.src = sceneBackwallLayer.src;
+
+    const table = document.createElement('img');
+    table.className = 'news-scene-preview-layer';
+    table.src = sceneTableLayer.src;
+
+    const board = document.createElement('div');
+    board.className = 'news-scene-preview-board';
+
+    const boardBase = document.createElement('img');
+    boardBase.className = 'news-scene-preview-board-base';
+    boardBase.src = boardImageBaseLayer.src;
+
+    const imageWrap = document.createElement('div');
+    imageWrap.className = 'news-scene-preview-image-wrap';
+
+    const image = document.createElement('img');
+    image.className = 'news-scene-preview-image';
+    image.alt = 'Превью сцены новости';
+    if (wrapper.dataset.imageData) {
+      image.src = wrapper.dataset.imageData;
+      image.classList.add('is-visible');
+    }
+    applyImageRenderToNode(image, settings);
+    imageWrap.appendChild(image);
+
+    const headBase = document.createElement('img');
+    headBase.className = 'news-scene-preview-head-base';
+    headBase.src = boardHeadBaseLayer.src;
+
+    const title = document.createElement('div');
+    title.className = 'news-scene-preview-title';
+    title.textContent = normalizeBoardTitle(titleInput.value.trim());
+
+    board.append(boardBase, imageWrap, headBase, title);
+    preview.append(backwall, table, board);
+    applySceneLayoutToPreviewNode(preview, settings);
+    return { preview, image, imageWrap, title };
+  }
+
+  const selectedSceneWrap = document.createElement('div');
+  selectedSceneWrap.className = 'news-scene-selected-wrap';
+  const selectedSceneLabel = document.createElement('div');
+  selectedSceneLabel.className = 'hint';
+  const selectedSceneBuilt = buildScenePreviewNode({ ...defaultNewsSceneSettings });
+  const selectedScenePreview = selectedSceneBuilt.preview;
+  const selectedSceneImage = selectedSceneBuilt.image;
+  const selectedSceneImageWrap = selectedSceneBuilt.imageWrap;
+  const selectedSceneTitle = selectedSceneBuilt.title;
+  selectedSceneWrap.append(selectedSceneLabel, selectedScenePreview);
+
   const sceneTimeline = document.createElement('div');
   sceneTimeline.className = 'news-scene-timeline';
 
-  const rowSceneSettings = { ...defaultNewsSceneSettings };
+  const rowSettingsBlock = document.createElement('div');
+  rowSettingsBlock.className = 'settings-block news-item-settings';
+  rowSettingsBlock.innerHTML = `
+    <h4>Параметры выбранной сцены новости</h4>
+    <div class="settings-grid">
+      <label>Режим подгонки
+        <select class="row-fit-mode"><option value="cover">Cover</option><option value="contain">Contain</option></select>
+      </label>
+      <label>Смещение X (−100..100)<input type="range" class="row-offset-x" min="-100" max="100" step="1" value="0" /></label>
+      <label>Смещение Y (−100..100)<input type="range" class="row-offset-y" min="-100" max="100" step="1" value="0" /></label>
+      <label>Ширина image (%)<input type="range" class="row-scale-w" min="20" max="300" step="1" value="100" /></label>
+      <label>Высота image (%)<input type="range" class="row-scale-h" min="20" max="300" step="1" value="100" /></label>
+      <label>Image X (%)<input type="number" class="row-image-x" min="0" max="100" step="0.1" value="16" /></label>
+      <label>Image Y (%)<input type="number" class="row-image-y" min="0" max="100" step="0.1" value="18" /></label>
+      <label>Image width (%)<input type="number" class="row-image-w" min="1" max="100" step="0.1" value="68" /></label>
+      <label>Image height (%)<input type="number" class="row-image-h" min="1" max="100" step="0.1" value="61" /></label>
+      <label>Title X (%)<input type="number" class="row-title-x" min="0" max="100" step="0.1" value="51" /></label>
+      <label>Title Y (%)<input type="number" class="row-title-y" min="0" max="100" step="0.1" value="34" /></label>
+      <label>Title width (%)<input type="number" class="row-title-w" min="1" max="100" step="0.1" value="36" /></label>
+      <label>Title size (px)<input type="number" class="row-title-size" min="8" max="120" step="1" value="40" /></label>
+      <div class="board-image-position-readout-wrap"><span class="hint row-scene-readout"></span></div>
+    </div>
+  `;
+  const rowReadout = rowSettingsBlock.querySelector('.row-scene-readout');
+  const rowFitMode = rowSettingsBlock.querySelector('.row-fit-mode');
+  const rowOffsetX = rowSettingsBlock.querySelector('.row-offset-x');
+  const rowOffsetY = rowSettingsBlock.querySelector('.row-offset-y');
+  const rowScaleW = rowSettingsBlock.querySelector('.row-scale-w');
+  const rowScaleH = rowSettingsBlock.querySelector('.row-scale-h');
+  const rowImageX = rowSettingsBlock.querySelector('.row-image-x');
+  const rowImageY = rowSettingsBlock.querySelector('.row-image-y');
+  const rowImageW = rowSettingsBlock.querySelector('.row-image-w');
+  const rowImageH = rowSettingsBlock.querySelector('.row-image-h');
+  const rowTitleX = rowSettingsBlock.querySelector('.row-title-x');
+  const rowTitleY = rowSettingsBlock.querySelector('.row-title-y');
+  const rowTitleW = rowSettingsBlock.querySelector('.row-title-w');
+  const rowTitleSize = rowSettingsBlock.querySelector('.row-title-size');
 
-  const scenePreviewBackwall = document.createElement('img');
-  scenePreviewBackwall.className = 'news-scene-preview-layer';
-  scenePreviewBackwall.alt = 'Фон сцены';
-  scenePreviewBackwall.src = sceneBackwallLayer.src;
+  function getSelectedFrame() {
+    return wrapper._sceneFrames[wrapper._selectedSceneIndex] || wrapper._sceneFrames[0];
+  }
 
-  const scenePreviewTable = document.createElement('img');
-  scenePreviewTable.className = 'news-scene-preview-layer';
-  scenePreviewTable.alt = 'Стол сцены';
-  scenePreviewTable.src = sceneTableLayer.src;
+  function setControlsFromSettings(settings) {
+    rowFitMode.value = settings.fitMode || 'cover';
+    rowOffsetX.value = String(settings.offsetX ?? 0);
+    rowOffsetY.value = String(settings.offsetY ?? 0);
+    rowScaleW.value = String(settings.scaleWidth ?? 100);
+    rowScaleH.value = String(settings.scaleHeight ?? 100);
+    rowImageX.value = String(settings.imageX ?? 16);
+    rowImageY.value = String(settings.imageY ?? 18);
+    rowImageW.value = String(settings.imageWidth ?? 68);
+    rowImageH.value = String(settings.imageHeight ?? 61);
+    rowTitleX.value = String(settings.titleX ?? 51);
+    rowTitleY.value = String(settings.titleY ?? 34);
+    rowTitleW.value = String(settings.titleWidth ?? 36);
+    rowTitleSize.value = String(settings.titleSize ?? 40);
+  }
 
-  const scenePreviewBoard = document.createElement('div');
-  scenePreviewBoard.className = 'news-scene-preview-board';
+  function readSettingsFromControls() {
+    return {
+      fitMode: rowFitMode.value === 'contain' ? 'contain' : 'cover',
+      offsetX: clampNumber(rowOffsetX.value, -100, 100, 0),
+      offsetY: clampNumber(rowOffsetY.value, -100, 100, 0),
+      scaleWidth: clampNumber(rowScaleW.value, 20, 300, 100),
+      scaleHeight: clampNumber(rowScaleH.value, 20, 300, 100),
+      imageX: clampNumber(rowImageX.value, 0, 100, 16),
+      imageY: clampNumber(rowImageY.value, 0, 100, 18),
+      imageWidth: clampNumber(rowImageW.value, 1, 100, 68),
+      imageHeight: clampNumber(rowImageH.value, 1, 100, 61),
+      titleX: clampNumber(rowTitleX.value, 0, 100, 51),
+      titleY: clampNumber(rowTitleY.value, 0, 100, 34),
+      titleWidth: clampNumber(rowTitleW.value, 1, 100, 36),
+      titleSize: clampNumber(rowTitleSize.value, 8, 120, 40),
+    };
+  }
 
-  const scenePreviewHeadBase = document.createElement('img');
-  scenePreviewHeadBase.className = 'news-scene-preview-head-base';
-  scenePreviewHeadBase.alt = 'Плашка заголовка новости';
-  scenePreviewHeadBase.src = boardHeadBaseLayer.src;
+  function applySelectedFrameToMainPreview() {
+    const frame = getSelectedFrame();
+    if (!frame) return;
+    const settings = frame.settings;
+    applyImageRenderToNode(selectedSceneImage, settings);
+    applySceneLayoutToPreviewNode(selectedScenePreview, settings);
+    selectedSceneTitle.textContent = normalizeBoardTitle(titleInput.value.trim());
+    if (wrapper.dataset.imageData) {
+      selectedSceneImage.src = wrapper.dataset.imageData;
+      selectedSceneImage.classList.add('is-visible');
+    } else {
+      selectedSceneImage.removeAttribute('src');
+      selectedSceneImage.classList.remove('is-visible');
+    }
+    selectedSceneLabel.textContent = `Выбрана сцена: t=${(frame.atMs / 1000).toFixed(frame.atMs % 1000 === 0 ? 0 : 1)}s`;
+    rowReadout.textContent = `x:${settings.offsetX}, y:${settings.offsetY}, w:${settings.scaleWidth}%, h:${settings.scaleHeight}%`;
+    wrapper._sceneSettings = { ...settings };
+  }
 
-  const scenePreviewBoardBase = document.createElement('img');
-  scenePreviewBoardBase.className = 'news-scene-preview-board-base';
-  scenePreviewBoardBase.alt = 'Плашка новости';
-  scenePreviewBoardBase.src = boardImageBaseLayer.src;
+  function rebuildSceneFrames() {
+    const previousFrame = getSelectedFrame();
+    const actions = getSceneActionsForNews(textarea.value);
+    const nextFrames = [{ atMs: 0, type: 'start' }, ...actions].map((frame) => {
+      const found = wrapper._sceneFrames.find((item) => item.atMs === frame.atMs && item.type === frame.type);
+      return { ...frame, settings: found?.settings ? { ...found.settings } : { ...defaultNewsSceneSettings } };
+    });
+    wrapper._sceneFrames = nextFrames;
+    const prevIndex = nextFrames.findIndex((frame) => frame.atMs === previousFrame?.atMs && frame.type === previousFrame?.type);
+    wrapper._selectedSceneIndex = prevIndex >= 0 ? prevIndex : 0;
+  }
 
-  const scenePreviewTitle = document.createElement('div');
-  scenePreviewTitle.className = 'news-scene-preview-title';
-  scenePreviewTitle.textContent = '';
-
-  const scenePreviewImageWrap = document.createElement('div');
-  scenePreviewImageWrap.className = 'news-scene-preview-image-wrap';
-
-  const scenePreviewImage = document.createElement('img');
-  scenePreviewImage.className = 'news-scene-preview-image';
-  scenePreviewImage.alt = 'Превью сцены новости';
-  applyImageRenderToNode(scenePreviewImage, rowSceneSettings);
-
-  scenePreviewImageWrap.appendChild(scenePreviewImage);
-  scenePreviewBoard.append(scenePreviewBoardBase, scenePreviewImageWrap, scenePreviewHeadBase, scenePreviewTitle);
-  scenePreview.append(scenePreviewBackwall, scenePreviewTable, scenePreviewBoard);
-  bindRealtimeImageDrag(scenePreviewImageWrap, rowSceneSettings, () => {
-    applyImageRenderToNode(scenePreviewImage, rowSceneSettings);
-    syncNewsScenePreview();
-    renderNewsSceneTimeline();
-  });
-  wrapper._scenePreviewImage = scenePreviewImage;
+  function renderNewsSceneTimeline() {
+    sceneTimeline.innerHTML = '';
+    wrapper._sceneFrames.forEach((frame, index) => {
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.className = 'news-scene-timeline-item';
+      if (index === wrapper._selectedSceneIndex) item.classList.add('is-selected');
+      const sec = (frame.atMs / 1000).toFixed(frame.atMs % 1000 === 0 ? 0 : 1);
+      item.innerHTML = `<strong>t=${sec}s</strong><span>${frame.type === 'start' ? 'Базовая сцена' : frame.type}</span>`;
+      item.addEventListener('click', () => {
+        wrapper._selectedSceneIndex = index;
+        setControlsFromSettings(frame.settings);
+        applySelectedFrameToMainPreview();
+        renderNewsSceneTimeline();
+      });
+      sceneTimeline.appendChild(item);
+    });
+  }
 
   const rowSettingsBlock = document.createElement('div');
   rowSettingsBlock.className = 'settings-block news-item-settings';
@@ -769,28 +909,29 @@ function addSpeechNewsItem(initialValue = '') {
     });
   }
 
-  const actions = document.createElement('div');
-  actions.className = 'news-item-actions';
-
+  const actionsRow = document.createElement('div');
+  actionsRow.className = 'news-item-actions';
   const moveUpButton = document.createElement('button');
   moveUpButton.type = 'button';
   moveUpButton.textContent = '↑ Поднять выше';
-
   const moveDownButton = document.createElement('button');
   moveDownButton.type = 'button';
   moveDownButton.textContent = '↓ Опустить ниже';
-
   const deleteButton = document.createElement('button');
   deleteButton.type = 'button';
   deleteButton.textContent = '✕ Удалить новость';
+  actionsRow.append(moveUpButton, moveDownButton, deleteButton);
 
   textarea.addEventListener('input', () => {
     updateNewsItemCounter(textarea, counter);
     updateSceneSubtitles();
+    rebuildSceneFrames();
     renderNewsSceneTimeline();
+    setControlsFromSettings(getSelectedFrame().settings);
+    applySelectedFrameToMainPreview();
   });
   titleInput.addEventListener('input', () => {
-    scenePreviewTitle.textContent = normalizeBoardTitle(titleInput.value.trim());
+    applySelectedFrameToMainPreview();
   });
   linkInput.addEventListener('input', () => {
     linkInput.setCustomValidity(isValidHttpUrl(linkInput.value.trim()) ? '' : 'Введите ссылку http/https');
@@ -802,78 +943,63 @@ function addSpeechNewsItem(initialValue = '') {
       wrapper.dataset.imageData = '';
       imagePreview.removeAttribute('src');
       imagePreview.classList.remove('is-visible');
-      scenePreviewImage.removeAttribute('src');
-      scenePreviewImage.classList.remove('is-visible');
+      applySelectedFrameToMainPreview();
       return;
     }
-
-    fitImageToBoardSlot(file, rowSceneSettings)
+    fitImageToBoardSlot(file, getSelectedFrame().settings)
       .then((result) => {
         wrapper.dataset.imageData = result;
         imagePreview.src = result;
         imagePreview.classList.add('is-visible');
-        scenePreviewImage.src = result;
-        scenePreviewImage.classList.add('is-visible');
-        applyImageRenderToNode(scenePreviewImage, rowSceneSettings);
+        applySelectedFrameToMainPreview();
       })
       .catch(() => {
         wrapper.dataset.imageData = '';
         imagePreview.removeAttribute('src');
         imagePreview.classList.remove('is-visible');
-        scenePreviewImage.removeAttribute('src');
-        scenePreviewImage.classList.remove('is-visible');
         imageInput.setCustomValidity('Не удалось обработать изображение. Попробуйте другой файл.');
         imageInput.reportValidity();
       });
   });
+
   rowSettingsBlock.querySelectorAll('input,select').forEach((input) => {
     input.addEventListener('input', () => {
-      syncNewsScenePreview();
-      if (wrapper.dataset.imageData) {
-        scenePreviewImage.src = wrapper.dataset.imageData;
-      }
+      const frame = getSelectedFrame();
+      if (!frame) return;
+      frame.settings = readSettingsFromControls();
+      applySelectedFrameToMainPreview();
+      renderNewsSceneTimeline();
     });
   });
 
-  updateNewsItemCounter(textarea, counter);
-  actions.append(moveUpButton, moveDownButton, deleteButton);
-  wrapper.append(label, titleInput, scenePreview, sceneTimeline, rowSettingsBlock, textarea, counter, linkInput, imageInput, imagePreview, actions);
+  wrapper.append(label, titleInput, selectedSceneWrap, sceneTimeline, rowSettingsBlock, textarea, counter, linkInput, imageInput, imagePreview, actionsRow);
   speechNewsItems.appendChild(wrapper);
 
   moveUpButton.addEventListener('click', () => {
     const prev = wrapper.previousElementSibling;
-    if (!prev) {
-      return;
-    }
+    if (!prev) return;
     speechNewsItems.insertBefore(wrapper, prev);
     renumberSpeechNews();
   });
-
   moveDownButton.addEventListener('click', () => {
     const next = wrapper.nextElementSibling;
-    if (!next) {
-      return;
-    }
+    if (!next) return;
     speechNewsItems.insertBefore(next, wrapper);
     renumberSpeechNews();
   });
-
   deleteButton.addEventListener('click', () => {
     wrapper.remove();
     renumberSpeechNews();
-    const first = speechNewsItems.querySelector('.news-item-row');
-    if (!first) {
-      addSpeechNewsItem();
-      return;
-    }
+    if (!speechNewsItems.querySelector('.news-item-row')) addSpeechNewsItem();
     updateSceneSubtitles();
   });
 
-  renumberSpeechNews();
-  applySceneLayout(episodeFormatInput.value);
-  syncNewsScenePreview();
+  updateNewsItemCounter(textarea, counter);
+  rebuildSceneFrames();
+  setControlsFromSettings(getSelectedFrame().settings);
   renderNewsSceneTimeline();
-  scenePreviewTitle.textContent = normalizeBoardTitle(titleInput.value.trim());
+  applySelectedFrameToMainPreview();
+  renumberSpeechNews();
 }
 
 function renumberSpeechNews() {
@@ -1038,25 +1164,21 @@ function applySceneLayout(format) {
 
   const rows = speechNewsItems.querySelectorAll('.news-item-row');
   rows.forEach((row) => {
-    const preview = row.querySelector('.news-scene-preview');
-    const previewBackwall = row.querySelector('.news-scene-preview-layer:nth-child(1)');
-    const previewTable = row.querySelector('.news-scene-preview-layer:nth-child(2)');
-    const previewBoardBase = row.querySelector('.news-scene-preview-board-base');
-    const previewHeadBase = row.querySelector('.news-scene-preview-head-base');
-    if (preview) {
-      preview.classList.toggle('is-horizontal', isHorizontal);
+    row.querySelectorAll('.news-scene-preview').forEach((preview) => preview.classList.toggle('is-horizontal', isHorizontal));
+    row.querySelectorAll('.news-scene-preview-layer').forEach((layer, index) => {
+      if (index % 2 === 0) layer.src = sceneBackwallLayer.src;
+      if (index % 2 === 1) layer.src = sceneTableLayer.src;
+    });
+    row.querySelectorAll('.news-scene-preview-board-base').forEach((node) => { node.src = boardImageBaseLayer.src; });
+    row.querySelectorAll('.news-scene-preview-head-base').forEach((node) => { node.src = boardHeadBaseLayer.src; });
+    if (Array.isArray(row._sceneFrames)) {
+      row._sceneFrames.forEach((frame) => {
+        frame.settings.imageX = Number(((slot.imageRect.x / slot.asset.width) * 100).toFixed(1));
+        frame.settings.imageY = Number(((slot.imageRect.y / slot.asset.height) * 100).toFixed(1));
+        frame.settings.imageWidth = Number(((slot.imageRect.width / slot.asset.width) * 100).toFixed(1));
+        frame.settings.imageHeight = Number(((slot.imageRect.height / slot.asset.height) * 100).toFixed(1));
+      });
     }
-    if (previewBackwall) previewBackwall.src = sceneBackwallLayer.src;
-    if (previewTable) previewTable.src = sceneTableLayer.src;
-    if (previewBoardBase) previewBoardBase.src = boardImageBaseLayer.src;
-    if (previewHeadBase) previewHeadBase.src = boardHeadBaseLayer.src;
-    const rowSettings = row._sceneSettings || { ...defaultNewsSceneSettings };
-    rowSettings.imageX = Number(((slot.imageRect.x / slot.asset.width) * 100).toFixed(1));
-    rowSettings.imageY = Number(((slot.imageRect.y / slot.asset.height) * 100).toFixed(1));
-    rowSettings.imageWidth = Number(((slot.imageRect.width / slot.asset.width) * 100).toFixed(1));
-    rowSettings.imageHeight = Number(((slot.imageRect.height / slot.asset.height) * 100).toFixed(1));
-    row._sceneSettings = rowSettings;
-    if (preview) applySceneLayoutToPreviewNode(preview, rowSettings);
   });
 }
 
@@ -1350,10 +1472,11 @@ function buildEpisodeScript(mode = 'preview') {
         ...item,
         title: mode === 'preview' ? '' : item.title,
         scene_settings: sceneSettings,
-        scene_keyframes: getSceneActionsForNews(item.text).map((action) => ({
-          at_ms: action.atMs,
-          type: action.type,
-          duration_ms: action.duration_ms || 0,
+        scene_keyframes: (item.scene_frames || []).map((frame) => ({
+          at_ms: frame.atMs || 0,
+          type: frame.type || 'start',
+          duration_ms: frame.duration_ms || 0,
+          settings: frame.settings || { ...defaultNewsSceneSettings },
         })),
       };
     }),
