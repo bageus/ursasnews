@@ -797,9 +797,9 @@ function addSpeechNewsItem(initialValue = '') {
       selectedSceneImage.classList.remove('is-visible');
     }
     selectedSceneLabel.textContent = `Выбрана сцена: t=${(frame.atMs / 1000).toFixed(frame.atMs % 1000 === 0 ? 0 : 1)}s`;
-    const rowReadoutNode = sceneSettingsPanel.querySelector('.row-scene-readout');
-    if (rowReadoutNode) {
-      rowReadoutNode.textContent = `x:${settings.offsetX}, y:${settings.offsetY}, w:${settings.scaleWidth}%, h:${settings.scaleHeight}%`;
+    const sceneReadoutElement = sceneSettingsPanel.querySelector('.row-scene-readout');
+    if (sceneReadoutElement) {
+      sceneReadoutElement.textContent = `x:${settings.offsetX}, y:${settings.offsetY}, w:${settings.scaleWidth}%, h:${settings.scaleHeight}%`;
     }
     wrapper._sceneSettings = { ...settings };
   }
