@@ -460,11 +460,14 @@ function loadImageFromDataUrl(dataUrl) {
 async function fitImageToBoardSlot(file) {
   const dataUrl = await readFileAsDataUrl(file);
   const sourceImage = await loadImageFromDataUrl(dataUrl);
-  const format = episodeFormatInput.value === '1920x1080' ? '1920x1080' : '1080x1920';
-  const slot = boardSlotConfig[format];
-  const { fitMode, offsetX, offsetY, scaleWidth, scaleHeight } = getBoardImageRenderSettings();
-  const targetWidth = slot?.width || 900;
-  const targetHeight = slot?.height || 520;
+  const MAX_DIMENSION = 2048;
+  if (sourceImage.width <= MAX_DIMENSION && sourceImage.height <= MAX_DIMENSION) {
+    return dataUrl;
+  }
+
+  const downscaleRatio = Math.min(MAX_DIMENSION / sourceImage.width, MAX_DIMENSION / sourceImage.height);
+  const targetWidth = Math.max(1, Math.round(sourceImage.width * downscaleRatio));
+  const targetHeight = Math.max(1, Math.round(sourceImage.height * downscaleRatio));
 
   const canvas = document.createElement('canvas');
   canvas.width = targetWidth;
@@ -476,21 +479,7 @@ async function fitImageToBoardSlot(file) {
 
   const srcWidth = sourceImage.width;
   const srcHeight = sourceImage.height;
-  const safeOffsetX = Math.max(-100, Math.min(100, offsetX)) / 100;
-  const safeOffsetY = Math.max(-100, Math.min(100, offsetY)) / 100;
-  const safeScaleX = Math.max(20, Math.min(300, scaleWidth)) / 100;
-  const safeScaleY = Math.max(20, Math.min(300, scaleHeight)) / 100;
-  const baseScale =
-    fitMode === 'contain'
-      ? Math.min(targetWidth / srcWidth, targetHeight / srcHeight)
-      : Math.max(targetWidth / srcWidth, targetHeight / srcHeight);
-  const drawWidth = Math.round(srcWidth * baseScale * safeScaleX);
-  const drawHeight = Math.round(srcHeight * baseScale * safeScaleY);
-  const freeShiftX = Math.abs(drawWidth - targetWidth) / 2;
-  const freeShiftY = Math.abs(drawHeight - targetHeight) / 2;
-  const dx = Math.round((targetWidth - drawWidth) / 2 + freeShiftX * safeOffsetX);
-  const dy = Math.round((targetHeight - drawHeight) / 2 + freeShiftY * safeOffsetY);
-  ctx.drawImage(sourceImage, 0, 0, srcWidth, srcHeight, dx, dy, drawWidth, drawHeight);
+  ctx.drawImage(sourceImage, 0, 0, srcWidth, srcHeight, 0, 0, targetWidth, targetHeight);
   return canvas.toDataURL('image/webp', 0.92);
 }
 
