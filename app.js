@@ -68,6 +68,7 @@ let mouthPreviewTimerIds = [];
 let subtitleTimerIds = [];
 let speechNewsIndex = 0;
 let tubeLeaderboardLoaded = false;
+let activeScenePreviewRow = null;
 const subtitlePosition = { x: 0, y: 0 };
 const BOARD_NEWS_IMAGE_RECT = { x: 164, y: 276, width: 696, height: 937 };
 const boardSlotConfig = {
@@ -294,6 +295,88 @@ function updateBoardImagePositionStyle() {
   boardNewsImagePreview.style.objectFit = fitMode;
   boardNewsImagePreview.style.objectPosition = `calc(50% + ${offsetX}%) calc(50% + ${offsetY}%)`;
   updateBoardImageReadout();
+  syncAllNewsScenePreviews();
+}
+
+function applyImageRenderToNode(node) {
+  if (!node) {
+    return;
+  }
+  const { fitMode, offsetX, offsetY } = getBoardImageRenderSettings();
+  node.style.objectFit = fitMode;
+  node.style.objectPosition = `calc(50% + ${offsetX}%) calc(50% + ${offsetY}%)`;
+}
+
+function syncSceneFromNewsRow(row) {
+  if (!row) {
+    resetBoardContent();
+    activeScenePreviewRow = null;
+    return;
+  }
+
+  activeScenePreviewRow = row;
+  const title = row.querySelector('.speech-news-title')?.value.trim() || 'URSAS NEWS';
+  const imageData = row.dataset.imageData || '';
+  setBoardContent(title, imageData, true);
+}
+
+function syncAllNewsScenePreviews() {
+  const rows = speechNewsItems.querySelectorAll('.news-item-row');
+  rows.forEach((row) => {
+    if (row._scenePreviewImage) {
+      applyImageRenderToNode(row._scenePreviewImage);
+    }
+  });
+}
+
+function updateOffsetByDragDelta(startValue, deltaPixels, sizePixels) {
+  if (!sizePixels) {
+    return startValue;
+  }
+  const deltaPercent = (deltaPixels / sizePixels) * 200;
+  return Math.max(-100, Math.min(100, Math.round(startValue + deltaPercent)));
+}
+
+function bindRealtimeImageDrag(areaNode) {
+  if (!areaNode) {
+    return;
+  }
+
+  areaNode.addEventListener('pointerdown', (event) => {
+    if (!boardNewsImagePreview.classList.contains('is-visible')) {
+      return;
+    }
+    const pointerId = event.pointerId;
+    const bounds = areaNode.getBoundingClientRect();
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const startOffsetX = Number(boardImageOffsetXInput.value || 0);
+    const startOffsetY = Number(boardImageOffsetYInput.value || 0);
+
+    areaNode.setPointerCapture(pointerId);
+    event.preventDefault();
+
+    const onMove = (moveEvent) => {
+      const nextOffsetX = updateOffsetByDragDelta(startOffsetX, moveEvent.clientX - startX, bounds.width);
+      const nextOffsetY = updateOffsetByDragDelta(startOffsetY, moveEvent.clientY - startY, bounds.height);
+      boardImageOffsetXInput.value = String(nextOffsetX);
+      boardImageOffsetYInput.value = String(nextOffsetY);
+      updateBoardImagePositionStyle();
+    };
+
+    const onUp = () => {
+      areaNode.removeEventListener('pointermove', onMove);
+      areaNode.removeEventListener('pointerup', onUp);
+      areaNode.removeEventListener('pointercancel', onUp);
+      if (activeScenePreviewRow) {
+        syncSceneFromNewsRow(activeScenePreviewRow);
+      }
+    };
+
+    areaNode.addEventListener('pointermove', onMove);
+    areaNode.addEventListener('pointerup', onUp);
+    areaNode.addEventListener('pointercancel', onUp);
+  });
 }
 
 function readFileAsDataUrl(file) {
@@ -571,6 +654,24 @@ function addSpeechNewsItem(initialValue = '') {
   const scenePreview = document.createElement('div');
   scenePreview.className = 'news-scene-preview';
 
+  const scenePreviewBackwall = document.createElement('img');
+  scenePreviewBackwall.className = 'news-scene-preview-layer';
+  scenePreviewBackwall.alt = 'Фон сцены';
+  scenePreviewBackwall.src = sceneBackwallLayer.src;
+
+  const scenePreviewTable = document.createElement('img');
+  scenePreviewTable.className = 'news-scene-preview-layer';
+  scenePreviewTable.alt = 'Стол сцены';
+  scenePreviewTable.src = sceneTableLayer.src;
+
+  const scenePreviewBoard = document.createElement('div');
+  scenePreviewBoard.className = 'news-scene-preview-board';
+
+  const scenePreviewBoardBase = document.createElement('img');
+  scenePreviewBoardBase.className = 'news-scene-preview-board-base';
+  scenePreviewBoardBase.alt = 'Плашка новости';
+  scenePreviewBoardBase.src = boardImageBaseLayer.src;
+
   const scenePreviewTitle = document.createElement('div');
   scenePreviewTitle.className = 'news-scene-preview-title';
   scenePreviewTitle.textContent = normalizeBoardTitle('URSAS NEWS');
@@ -581,9 +682,13 @@ function addSpeechNewsItem(initialValue = '') {
   const scenePreviewImage = document.createElement('img');
   scenePreviewImage.className = 'news-scene-preview-image';
   scenePreviewImage.alt = 'Превью сцены новости';
+  applyImageRenderToNode(scenePreviewImage);
 
   scenePreviewImageWrap.appendChild(scenePreviewImage);
-  scenePreview.append(scenePreviewTitle, scenePreviewImageWrap);
+  scenePreviewBoard.append(scenePreviewImageWrap, scenePreviewBoardBase, scenePreviewTitle);
+  scenePreview.append(scenePreviewBackwall, scenePreviewTable, scenePreviewBoard);
+  bindRealtimeImageDrag(scenePreviewImageWrap);
+  wrapper._scenePreviewImage = scenePreviewImage;
 
   const counter = document.createElement('div');
   counter.className = 'news-item-counter';
@@ -609,6 +714,9 @@ function addSpeechNewsItem(initialValue = '') {
   });
   titleInput.addEventListener('input', () => {
     scenePreviewTitle.textContent = normalizeBoardTitle(titleInput.value.trim() || 'URSAS NEWS');
+    if (activeScenePreviewRow === wrapper) {
+      syncSceneFromNewsRow(wrapper);
+    }
   });
   linkInput.addEventListener('input', () => {
     linkInput.setCustomValidity(isValidHttpUrl(linkInput.value.trim()) ? '' : 'Введите ссылку http/https');
@@ -622,6 +730,9 @@ function addSpeechNewsItem(initialValue = '') {
       imagePreview.classList.remove('is-visible');
       scenePreviewImage.removeAttribute('src');
       scenePreviewImage.classList.remove('is-visible');
+      if (activeScenePreviewRow === wrapper) {
+        syncSceneFromNewsRow(wrapper);
+      }
       return;
     }
 
@@ -632,6 +743,10 @@ function addSpeechNewsItem(initialValue = '') {
         imagePreview.classList.add('is-visible');
         scenePreviewImage.src = result;
         scenePreviewImage.classList.add('is-visible');
+        applyImageRenderToNode(scenePreviewImage);
+        if (activeScenePreviewRow === wrapper) {
+          syncSceneFromNewsRow(wrapper);
+        }
       })
       .catch(() => {
         wrapper.dataset.imageData = '';
@@ -641,8 +756,14 @@ function addSpeechNewsItem(initialValue = '') {
         scenePreviewImage.classList.remove('is-visible');
         imageInput.setCustomValidity('Не удалось обработать изображение. Попробуйте другой файл.');
         imageInput.reportValidity();
+        if (activeScenePreviewRow === wrapper) {
+          syncSceneFromNewsRow(wrapper);
+        }
       });
   });
+
+  wrapper.addEventListener('pointerdown', () => syncSceneFromNewsRow(wrapper));
+  wrapper.addEventListener('focusin', () => syncSceneFromNewsRow(wrapper));
 
   updateNewsItemCounter(textarea, counter);
   actions.append(moveUpButton, moveDownButton, deleteButton);
@@ -668,6 +789,7 @@ function addSpeechNewsItem(initialValue = '') {
   });
 
   deleteButton.addEventListener('click', () => {
+    const wasActive = activeScenePreviewRow === wrapper;
     wrapper.remove();
     renumberSpeechNews();
     const first = speechNewsItems.querySelector('.news-item-row');
@@ -675,10 +797,17 @@ function addSpeechNewsItem(initialValue = '') {
       addSpeechNewsItem();
       return;
     }
+    if (wasActive) {
+      syncSceneFromNewsRow(first);
+    }
     updateSceneSubtitles();
   });
 
   renumberSpeechNews();
+  applySceneLayout(episodeFormatInput.value);
+  if (!activeScenePreviewRow) {
+    syncSceneFromNewsRow(wrapper);
+  }
 }
 
 function renumberSpeechNews() {
@@ -849,6 +978,27 @@ function applySceneLayout(format) {
   boardNewsTitle.style.setProperty('--board-title-left', slot.title.left);
   boardNewsTitle.style.setProperty('--board-title-width', slot.title.width);
   boardNewsTitle.style.setProperty('--board-title-size', slot.title.size);
+  const rows = speechNewsItems.querySelectorAll('.news-item-row');
+  rows.forEach((row) => {
+    const preview = row.querySelector('.news-scene-preview');
+    const previewBackwall = row.querySelector('.news-scene-preview-layer:nth-child(1)');
+    const previewTable = row.querySelector('.news-scene-preview-layer:nth-child(2)');
+    const previewBoardBase = row.querySelector('.news-scene-preview-board-base');
+    const previewTitle = row.querySelector('.news-scene-preview-title');
+    if (preview) {
+      preview.classList.toggle('is-horizontal', isHorizontal);
+      preview.style.setProperty('--board-image-slot-inset', `${top}% ${right}% ${bottom}% ${left}%`);
+      preview.style.setProperty('--board-title-top', slot.title.top);
+      preview.style.setProperty('--board-title-left', slot.title.left);
+      preview.style.setProperty('--board-title-width', slot.title.width);
+    }
+    if (previewTitle) {
+      previewTitle.style.fontSize = slot.title.size;
+    }
+    if (previewBackwall) previewBackwall.src = sceneBackwallLayer.src;
+    if (previewTable) previewTable.src = sceneTableLayer.src;
+    if (previewBoardBase) previewBoardBase.src = boardImageBaseLayer.src;
+  });
   updateBoardImagePositionStyle();
 }
 
