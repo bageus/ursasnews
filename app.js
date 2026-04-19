@@ -707,9 +707,9 @@ function addSpeechNewsItem(initialValue = '') {
   const sceneTimeline = document.createElement('div');
   sceneTimeline.className = 'news-scene-timeline';
 
-  const rowSettingsBlock = document.createElement('div');
-  rowSettingsBlock.className = 'settings-block news-item-settings';
-  rowSettingsBlock.innerHTML = `
+  const sceneSettingsPanel = document.createElement('div');
+  sceneSettingsPanel.className = 'settings-block news-item-settings';
+  sceneSettingsPanel.innerHTML = `
     <h4>Параметры выбранной сцены новости</h4>
     <div class="settings-grid">
       <label>Режим подгонки
@@ -730,20 +730,20 @@ function addSpeechNewsItem(initialValue = '') {
       <div class="board-image-position-readout-wrap"><span class="hint row-scene-readout"></span></div>
     </div>
   `;
-  const rowReadout = rowSettingsBlock.querySelector('.row-scene-readout');
-  const rowFitMode = rowSettingsBlock.querySelector('.row-fit-mode');
-  const rowOffsetX = rowSettingsBlock.querySelector('.row-offset-x');
-  const rowOffsetY = rowSettingsBlock.querySelector('.row-offset-y');
-  const rowScaleW = rowSettingsBlock.querySelector('.row-scale-w');
-  const rowScaleH = rowSettingsBlock.querySelector('.row-scale-h');
-  const rowImageX = rowSettingsBlock.querySelector('.row-image-x');
-  const rowImageY = rowSettingsBlock.querySelector('.row-image-y');
-  const rowImageW = rowSettingsBlock.querySelector('.row-image-w');
-  const rowImageH = rowSettingsBlock.querySelector('.row-image-h');
-  const rowTitleX = rowSettingsBlock.querySelector('.row-title-x');
-  const rowTitleY = rowSettingsBlock.querySelector('.row-title-y');
-  const rowTitleW = rowSettingsBlock.querySelector('.row-title-w');
-  const rowTitleSize = rowSettingsBlock.querySelector('.row-title-size');
+  const rowReadout = sceneSettingsPanel.querySelector('.row-scene-readout');
+  const rowFitMode = sceneSettingsPanel.querySelector('.row-fit-mode');
+  const rowOffsetX = sceneSettingsPanel.querySelector('.row-offset-x');
+  const rowOffsetY = sceneSettingsPanel.querySelector('.row-offset-y');
+  const rowScaleW = sceneSettingsPanel.querySelector('.row-scale-w');
+  const rowScaleH = sceneSettingsPanel.querySelector('.row-scale-h');
+  const rowImageX = sceneSettingsPanel.querySelector('.row-image-x');
+  const rowImageY = sceneSettingsPanel.querySelector('.row-image-y');
+  const rowImageW = sceneSettingsPanel.querySelector('.row-image-w');
+  const rowImageH = sceneSettingsPanel.querySelector('.row-image-h');
+  const rowTitleX = sceneSettingsPanel.querySelector('.row-title-x');
+  const rowTitleY = sceneSettingsPanel.querySelector('.row-title-y');
+  const rowTitleW = sceneSettingsPanel.querySelector('.row-title-w');
+  const rowTitleSize = sceneSettingsPanel.querySelector('.row-title-size');
 
   function getSelectedFrame() {
     return wrapper._sceneFrames[wrapper._selectedSceneIndex] || wrapper._sceneFrames[0];
@@ -923,7 +923,7 @@ function addSpeechNewsItem(initialValue = '') {
       });
   });
 
-  rowSettingsBlock.querySelectorAll('input,select').forEach((input) => {
+  sceneSettingsPanel.querySelectorAll('input,select').forEach((input) => {
     input.addEventListener('input', () => {
       const frame = getSelectedFrame();
       if (!frame) return;
@@ -933,7 +933,7 @@ function addSpeechNewsItem(initialValue = '') {
     });
   });
 
-  wrapper.append(label, titleInput, selectedSceneWrap, sceneTimeline, rowSettingsBlock, textarea, counter, linkInput, imageInput, imagePreview, actionsRow);
+  wrapper.append(label, titleInput, selectedSceneWrap, sceneTimeline, sceneSettingsPanel, textarea, counter, linkInput, imageInput, imagePreview, actionsRow);
   speechNewsItems.appendChild(wrapper);
 
   moveUpButton.addEventListener('click', () => {
