@@ -2,14 +2,19 @@ const tabs = document.querySelectorAll('.tab');
 const panels = document.querySelectorAll('.panel');
 
 tabs.forEach((tab) => {
-  tab.addEventListener('click', () => {
+  tab.addEventListener('click', (event) => {
+    event.preventDefault();
     const tabId = tab.dataset.tab;
+    const nextPanel = document.getElementById(tabId);
+    if (!nextPanel) {
+      return;
+    }
 
     tabs.forEach((t) => t.classList.remove('is-active'));
     panels.forEach((p) => p.classList.remove('is-active'));
 
     tab.classList.add('is-active');
-    document.getElementById(tabId).classList.add('is-active');
+    nextPanel.classList.add('is-active');
 
     if (tabId === 'rubrics') {
       loadTubeLeaderboard();
@@ -49,21 +54,6 @@ const boardImageBaseLayer = document.getElementById('board-image-base-layer');
 const boardImageSlot = document.getElementById('board-image-slot');
 const boardNewsTitle = document.getElementById('board-news-title');
 const boardNewsImagePreview = document.getElementById('board-news-image-preview');
-const boardImageFitModeInput = document.getElementById('board-image-fit-mode');
-const boardImageOffsetXInput = document.getElementById('board-image-offset-x');
-const boardImageOffsetYInput = document.getElementById('board-image-offset-y');
-const boardImageScaleWidthInput = document.getElementById('board-image-scale-width');
-const boardImageScaleHeightInput = document.getElementById('board-image-scale-height');
-const boardImagePositionReadout = document.getElementById('board-image-position-readout');
-const boardSlotXInput = document.getElementById('board-slot-x');
-const boardSlotYInput = document.getElementById('board-slot-y');
-const boardSlotWidthInput = document.getElementById('board-slot-width');
-const boardSlotHeightInput = document.getElementById('board-slot-height');
-const boardTitleXInput = document.getElementById('board-title-x');
-const boardTitleYInput = document.getElementById('board-title-y');
-const boardTitleWidthInput = document.getElementById('board-title-width');
-const boardTitleSizeInput = document.getElementById('board-title-size');
-const sceneCoordsReadout = document.getElementById('scene-coords-readout');
 const tubeLeaderboardList = document.getElementById('tube-leaderboard-list');
 const tubeLeaderboardStatus = document.getElementById('tube-lb-status');
 const tubeLeaderboardReload = document.getElementById('tube-lb-reload');
@@ -77,7 +67,6 @@ let mouthPreviewTimerIds = [];
 let subtitleTimerIds = [];
 let speechNewsIndex = 0;
 let tubeLeaderboardLoaded = false;
-let activeScenePreviewRow = null;
 const subtitlePosition = { x: 0, y: 0 };
 const BOARD_NEWS_IMAGE_RECT = { x: 164, y: 276, width: 696, height: 937 };
 const boardSlotConfig = {
@@ -100,6 +89,22 @@ const boardSlotConfig = {
     height: Math.round((BOARD_NEWS_IMAGE_RECT.height / 1536) * 1024),
     title: { top: '34%', left: '51%', width: '36%', size: '40px' },
   },
+};
+
+const defaultNewsSceneSettings = {
+  fitMode: 'cover',
+  offsetX: 0,
+  offsetY: 0,
+  scaleWidth: 100,
+  scaleHeight: 100,
+  imageX: 16,
+  imageY: 18,
+  imageWidth: 68,
+  imageHeight: 61,
+  titleX: 51,
+  titleY: 34,
+  titleWidth: 36,
+  titleSize: 40,
 };
 
 const TUBE_BACKEND_URL = 'https://api.ursasstube.fun';
@@ -219,7 +224,14 @@ function collectSpeechNewsItems() {
       const link = isValidHttpUrl(rawLink) ? rawLink : '';
       const image_data = row.dataset.imageData || '';
 
-      return { title, text, link, image_data };
+      return {
+        title,
+        text,
+        link,
+        image_data,
+        scene_settings: row._sceneSettings || { ...defaultNewsSceneSettings },
+        scene_frames: Array.isArray(row._sceneFrames) ? row._sceneFrames : [],
+      };
     })
     .filter((item) => item.title || item.text || item.link || item.image_data);
 }
@@ -285,57 +297,13 @@ function normalizeBoardTitle(value) {
   return compact.toUpperCase().slice(0, 48);
 }
 
-function getBoardImageRenderSettings() {
-  const fitMode = boardImageFitModeInput.value === 'contain' ? 'contain' : 'cover';
-  const offsetX = Number(boardImageOffsetXInput.value || 0);
-  const offsetY = Number(boardImageOffsetYInput.value || 0);
-  const scaleWidth = Number(boardImageScaleWidthInput.value || 100);
-  const scaleHeight = Number(boardImageScaleHeightInput.value || 100);
-  return { fitMode, offsetX, offsetY, scaleWidth, scaleHeight };
-}
-
-function updateBoardImageReadout() {
-  const { offsetX, offsetY, scaleWidth, scaleHeight } = getBoardImageRenderSettings();
-  boardImagePositionReadout.textContent = `x: ${offsetX}, y: ${offsetY}, w: ${scaleWidth}%, h: ${scaleHeight}%`;
-}
-
-function updateBoardImagePositionStyle() {
-  const { fitMode, offsetX, offsetY } = getBoardImageRenderSettings();
-  boardNewsImagePreview.style.objectFit = fitMode;
-  boardNewsImagePreview.style.objectPosition = `calc(50% + ${offsetX}%) calc(50% + ${offsetY}%)`;
-  updateBoardImageReadout();
-  syncAllNewsScenePreviews();
-}
-
-function applyImageRenderToNode(node) {
+function applyImageRenderToNode(node, settings = defaultNewsSceneSettings) {
   if (!node) {
     return;
   }
-  const { fitMode, offsetX, offsetY } = getBoardImageRenderSettings();
+  const { fitMode, offsetX, offsetY } = settings;
   node.style.objectFit = fitMode;
   node.style.objectPosition = `calc(50% + ${offsetX}%) calc(50% + ${offsetY}%)`;
-}
-
-function syncSceneFromNewsRow(row) {
-  if (!row) {
-    resetBoardContent();
-    activeScenePreviewRow = null;
-    return;
-  }
-
-  activeScenePreviewRow = row;
-  const title = row.querySelector('.speech-news-title')?.value.trim() || 'URSAS NEWS';
-  const imageData = row.dataset.imageData || '';
-  setBoardContent(title, imageData, true);
-}
-
-function syncAllNewsScenePreviews() {
-  const rows = speechNewsItems.querySelectorAll('.news-item-row');
-  rows.forEach((row) => {
-    if (row._scenePreviewImage) {
-      applyImageRenderToNode(row._scenePreviewImage);
-    }
-  });
 }
 
 function clampNumber(value, min, max, fallback) {
@@ -346,47 +314,16 @@ function clampNumber(value, min, max, fallback) {
   return Math.max(min, Math.min(max, numeric));
 }
 
-function getSceneLayoutSettings() {
-  const imageX = clampNumber(boardSlotXInput.value, 0, 100, 16);
-  const imageY = clampNumber(boardSlotYInput.value, 0, 100, 18);
-  const imageWidth = clampNumber(boardSlotWidthInput.value, 1, 100, 68);
-  const imageHeight = clampNumber(boardSlotHeightInput.value, 1, 100, 61);
-  const titleX = clampNumber(boardTitleXInput.value, 0, 100, 51);
-  const titleY = clampNumber(boardTitleYInput.value, 0, 100, 34);
-  const titleWidth = clampNumber(boardTitleWidthInput.value, 1, 100, 36);
-  const titleSize = clampNumber(boardTitleSizeInput.value, 8, 120, 40);
-  return { imageX, imageY, imageWidth, imageHeight, titleX, titleY, titleWidth, titleSize };
-}
-
-function updateSceneCoordsReadout() {
-  const { imageX, imageY, imageWidth, imageHeight, titleX, titleY, titleWidth, titleSize } = getSceneLayoutSettings();
-  sceneCoordsReadout.textContent =
-    `image: x ${imageX}%, y ${imageY}%, w ${imageWidth}%, h ${imageHeight}% · ` +
-    `title: x ${titleX}%, y ${titleY}%, w ${titleWidth}%, size ${titleSize}px`;
-}
-
-function applySceneLayoutFromControls() {
-  const { imageX, imageY, imageWidth, imageHeight, titleX, titleY, titleWidth, titleSize } = getSceneLayoutSettings();
+function applySceneLayoutToPreviewNode(preview, settings) {
+  const { imageX, imageY, imageWidth, imageHeight, titleX, titleY, titleWidth, titleSize } = settings;
   const imageRight = Math.max(0, 100 - imageX - imageWidth);
   const imageBottom = Math.max(0, 100 - imageY - imageHeight);
   const imageInset = `${imageY}% ${imageRight}% ${imageBottom}% ${imageX}%`;
-  boardImageSlot.style.setProperty('--board-image-slot-inset', imageInset);
-  boardLayer.style.setProperty('--board-title-top', `${titleY}%`);
-  boardLayer.style.setProperty('--board-title-left', `${titleX}%`);
-  boardLayer.style.setProperty('--board-title-width', `${titleWidth}%`);
-  boardLayer.style.setProperty('--board-title-size', `${titleSize}px`);
-
-  const rows = speechNewsItems.querySelectorAll('.news-item-row');
-  rows.forEach((row) => {
-    const preview = row.querySelector('.news-scene-preview');
-    if (!preview) return;
-    preview.style.setProperty('--board-image-slot-inset', imageInset);
-    preview.style.setProperty('--board-title-top', `${titleY}%`);
-    preview.style.setProperty('--board-title-left', `${titleX}%`);
-    preview.style.setProperty('--board-title-width', `${titleWidth}%`);
-    preview.style.setProperty('--board-title-size', `${Math.max(8, Math.round(titleSize * 0.35))}px`);
-  });
-  updateSceneCoordsReadout();
+  preview.style.setProperty('--board-image-slot-inset', imageInset);
+  preview.style.setProperty('--board-title-top', `${titleY}%`);
+  preview.style.setProperty('--board-title-left', `${titleX}%`);
+  preview.style.setProperty('--board-title-width', `${titleWidth}%`);
+  preview.style.setProperty('--board-title-size', `${Math.max(8, Math.round(titleSize * 0.35))}px`);
 }
 
 function updateOffsetByDragDelta(startValue, deltaPixels, sizePixels) {
@@ -397,21 +334,22 @@ function updateOffsetByDragDelta(startValue, deltaPixels, sizePixels) {
   return Math.max(-100, Math.min(100, Math.round(startValue + deltaPercent)));
 }
 
-function bindRealtimeImageDrag(areaNode) {
+function bindRealtimeImageDrag(areaNode, settings, onChange) {
   if (!areaNode) {
     return;
   }
 
   areaNode.addEventListener('pointerdown', (event) => {
-    if (!boardNewsImagePreview.classList.contains('is-visible')) {
+    const imageNode = areaNode.querySelector('.news-scene-preview-image');
+    if (!imageNode?.classList.contains('is-visible')) {
       return;
     }
     const pointerId = event.pointerId;
     const bounds = areaNode.getBoundingClientRect();
     const startX = event.clientX;
     const startY = event.clientY;
-    const startOffsetX = Number(boardImageOffsetXInput.value || 0);
-    const startOffsetY = Number(boardImageOffsetYInput.value || 0);
+    const startOffsetX = Number(settings.offsetX || 0);
+    const startOffsetY = Number(settings.offsetY || 0);
 
     areaNode.setPointerCapture(pointerId);
     event.preventDefault();
@@ -419,18 +357,15 @@ function bindRealtimeImageDrag(areaNode) {
     const onMove = (moveEvent) => {
       const nextOffsetX = updateOffsetByDragDelta(startOffsetX, moveEvent.clientX - startX, bounds.width);
       const nextOffsetY = updateOffsetByDragDelta(startOffsetY, moveEvent.clientY - startY, bounds.height);
-      boardImageOffsetXInput.value = String(nextOffsetX);
-      boardImageOffsetYInput.value = String(nextOffsetY);
-      updateBoardImagePositionStyle();
+      settings.offsetX = nextOffsetX;
+      settings.offsetY = nextOffsetY;
+      onChange();
     };
 
     const onUp = () => {
       areaNode.removeEventListener('pointermove', onMove);
       areaNode.removeEventListener('pointerup', onUp);
       areaNode.removeEventListener('pointercancel', onUp);
-      if (activeScenePreviewRow) {
-        syncSceneFromNewsRow(activeScenePreviewRow);
-      }
     };
 
     areaNode.addEventListener('pointermove', onMove);
@@ -457,12 +392,12 @@ function loadImageFromDataUrl(dataUrl) {
   });
 }
 
-async function fitImageToBoardSlot(file) {
+async function fitImageToBoardSlot(file, settings = defaultNewsSceneSettings) {
   const dataUrl = await readFileAsDataUrl(file);
   const sourceImage = await loadImageFromDataUrl(dataUrl);
   const format = episodeFormatInput.value === '1920x1080' ? '1920x1080' : '1080x1920';
   const slot = boardSlotConfig[format];
-  const { fitMode, offsetX, offsetY, scaleWidth, scaleHeight } = getBoardImageRenderSettings();
+  const { fitMode, offsetX, offsetY, scaleWidth, scaleHeight } = settings;
   const targetWidth = slot?.width || 900;
   const targetHeight = slot?.height || 520;
 
@@ -665,11 +600,26 @@ function updateNewsItemCounter(textarea, counterElement) {
   counterElement.textContent = `${chars} симв / ${words} слов`;
 }
 
+function getSceneActionsForNews(text) {
+  const actions = parseSpeechCommands(text).actions || [];
+  let cursorMs = 0;
+  return actions
+    .filter((action) => action.type !== 'speak_pause')
+    .map((action) => {
+      const point = { ...action, atMs: cursorMs };
+      cursorMs += Math.max(0, Number(action.duration_ms) || 0);
+      return point;
+    })
+    .filter((action) => action.type !== 'mouth_open' && action.type !== 'mouth_close');
+}
+
 function addSpeechNewsItem(initialValue = '') {
   speechNewsIndex += 1;
 
   const wrapper = document.createElement('div');
   wrapper.className = 'news-item-row';
+  wrapper._sceneFrames = [];
+  wrapper._selectedSceneIndex = 0;
 
   const label = document.createElement('label');
   label.className = 'news-item-label';
@@ -711,77 +661,218 @@ function addSpeechNewsItem(initialValue = '') {
   imagePreview.className = 'news-image-preview';
   imagePreview.alt = 'Превью изображения новости';
 
-  const scenePreview = document.createElement('div');
-  scenePreview.className = 'news-scene-preview';
+  function buildScenePreviewNode(settings) {
+    const preview = document.createElement('div');
+    preview.className = 'news-scene-preview';
 
-  const scenePreviewBackwall = document.createElement('img');
-  scenePreviewBackwall.className = 'news-scene-preview-layer';
-  scenePreviewBackwall.alt = 'Фон сцены';
-  scenePreviewBackwall.src = sceneBackwallLayer.src;
+    const backwall = document.createElement('img');
+    backwall.className = 'news-scene-preview-layer';
+    backwall.src = sceneBackwallLayer.src;
 
-  const scenePreviewTable = document.createElement('img');
-  scenePreviewTable.className = 'news-scene-preview-layer';
-  scenePreviewTable.alt = 'Стол сцены';
-  scenePreviewTable.src = sceneTableLayer.src;
+    const table = document.createElement('img');
+    table.className = 'news-scene-preview-layer';
+    table.src = sceneTableLayer.src;
 
-  const scenePreviewBoard = document.createElement('div');
-  scenePreviewBoard.className = 'news-scene-preview-board';
+    const board = document.createElement('div');
+    board.className = 'news-scene-preview-board';
 
-  const scenePreviewHeadBase = document.createElement('img');
-  scenePreviewHeadBase.className = 'news-scene-preview-head-base';
-  scenePreviewHeadBase.alt = 'Плашка заголовка новости';
-  scenePreviewHeadBase.src = boardHeadBaseLayer.src;
+    const boardBase = document.createElement('img');
+    boardBase.className = 'news-scene-preview-board-base';
+    boardBase.src = boardImageBaseLayer.src;
 
-  const scenePreviewBoardBase = document.createElement('img');
-  scenePreviewBoardBase.className = 'news-scene-preview-board-base';
-  scenePreviewBoardBase.alt = 'Плашка новости';
-  scenePreviewBoardBase.src = boardImageBaseLayer.src;
+    const imageWrap = document.createElement('div');
+    imageWrap.className = 'news-scene-preview-image-wrap';
 
-  const scenePreviewTitle = document.createElement('div');
-  scenePreviewTitle.className = 'news-scene-preview-title';
-  scenePreviewTitle.textContent = '';
+    const image = document.createElement('img');
+    image.className = 'news-scene-preview-image';
+    image.alt = 'Превью сцены новости';
+    if (wrapper.dataset.imageData) {
+      image.src = wrapper.dataset.imageData;
+      image.classList.add('is-visible');
+    }
+    applyImageRenderToNode(image, settings);
+    imageWrap.appendChild(image);
 
-  const scenePreviewImageWrap = document.createElement('div');
-  scenePreviewImageWrap.className = 'news-scene-preview-image-wrap';
+    const headBase = document.createElement('img');
+    headBase.className = 'news-scene-preview-head-base';
+    headBase.src = boardHeadBaseLayer.src;
 
-  const scenePreviewImage = document.createElement('img');
-  scenePreviewImage.className = 'news-scene-preview-image';
-  scenePreviewImage.alt = 'Превью сцены новости';
-  applyImageRenderToNode(scenePreviewImage);
+    const title = document.createElement('div');
+    title.className = 'news-scene-preview-title';
+    title.textContent = normalizeBoardTitle(titleInput.value.trim());
 
-  scenePreviewImageWrap.appendChild(scenePreviewImage);
-  scenePreviewBoard.append(scenePreviewBoardBase, scenePreviewImageWrap, scenePreviewHeadBase, scenePreviewTitle);
-  scenePreview.append(scenePreviewBackwall, scenePreviewTable, scenePreviewBoard);
-  bindRealtimeImageDrag(scenePreviewImageWrap);
-  wrapper._scenePreviewImage = scenePreviewImage;
+    board.append(boardBase, imageWrap, headBase, title);
+    preview.append(backwall, table, board);
+    applySceneLayoutToPreviewNode(preview, settings);
+    return { preview, image, imageWrap, title };
+  }
+
+  const selectedSceneWrap = document.createElement('div');
+  selectedSceneWrap.className = 'news-scene-selected-wrap';
+  const selectedSceneLabel = document.createElement('div');
+  selectedSceneLabel.className = 'hint';
+  const selectedSceneBuilt = buildScenePreviewNode({ ...defaultNewsSceneSettings });
+  const selectedScenePreview = selectedSceneBuilt.preview;
+  const selectedSceneImage = selectedSceneBuilt.image;
+  const selectedSceneImageWrap = selectedSceneBuilt.imageWrap;
+  const selectedSceneTitle = selectedSceneBuilt.title;
+  selectedSceneWrap.append(selectedSceneLabel, selectedScenePreview);
+
+  const sceneTimeline = document.createElement('div');
+  sceneTimeline.className = 'news-scene-timeline';
+
+  const rowSettingsBlock = document.createElement('div');
+  rowSettingsBlock.className = 'settings-block news-item-settings';
+  rowSettingsBlock.innerHTML = `
+    <h4>Параметры выбранной сцены новости</h4>
+    <div class="settings-grid">
+      <label>Режим подгонки
+        <select class="row-fit-mode"><option value="cover">Cover</option><option value="contain">Contain</option></select>
+      </label>
+      <label>Смещение X (−100..100)<input type="range" class="row-offset-x" min="-100" max="100" step="1" value="0" /></label>
+      <label>Смещение Y (−100..100)<input type="range" class="row-offset-y" min="-100" max="100" step="1" value="0" /></label>
+      <label>Ширина image (%)<input type="range" class="row-scale-w" min="20" max="300" step="1" value="100" /></label>
+      <label>Высота image (%)<input type="range" class="row-scale-h" min="20" max="300" step="1" value="100" /></label>
+      <label>Image X (%)<input type="number" class="row-image-x" min="0" max="100" step="0.1" value="16" /></label>
+      <label>Image Y (%)<input type="number" class="row-image-y" min="0" max="100" step="0.1" value="18" /></label>
+      <label>Image width (%)<input type="number" class="row-image-w" min="1" max="100" step="0.1" value="68" /></label>
+      <label>Image height (%)<input type="number" class="row-image-h" min="1" max="100" step="0.1" value="61" /></label>
+      <label>Title X (%)<input type="number" class="row-title-x" min="0" max="100" step="0.1" value="51" /></label>
+      <label>Title Y (%)<input type="number" class="row-title-y" min="0" max="100" step="0.1" value="34" /></label>
+      <label>Title width (%)<input type="number" class="row-title-w" min="1" max="100" step="0.1" value="36" /></label>
+      <label>Title size (px)<input type="number" class="row-title-size" min="8" max="120" step="1" value="40" /></label>
+      <div class="board-image-position-readout-wrap"><span class="hint row-scene-readout"></span></div>
+    </div>
+  `;
+  const rowReadout = rowSettingsBlock.querySelector('.row-scene-readout');
+  const rowFitMode = rowSettingsBlock.querySelector('.row-fit-mode');
+  const rowOffsetX = rowSettingsBlock.querySelector('.row-offset-x');
+  const rowOffsetY = rowSettingsBlock.querySelector('.row-offset-y');
+  const rowScaleW = rowSettingsBlock.querySelector('.row-scale-w');
+  const rowScaleH = rowSettingsBlock.querySelector('.row-scale-h');
+  const rowImageX = rowSettingsBlock.querySelector('.row-image-x');
+  const rowImageY = rowSettingsBlock.querySelector('.row-image-y');
+  const rowImageW = rowSettingsBlock.querySelector('.row-image-w');
+  const rowImageH = rowSettingsBlock.querySelector('.row-image-h');
+  const rowTitleX = rowSettingsBlock.querySelector('.row-title-x');
+  const rowTitleY = rowSettingsBlock.querySelector('.row-title-y');
+  const rowTitleW = rowSettingsBlock.querySelector('.row-title-w');
+  const rowTitleSize = rowSettingsBlock.querySelector('.row-title-size');
+
+  function getSelectedFrame() {
+    return wrapper._sceneFrames[wrapper._selectedSceneIndex] || wrapper._sceneFrames[0];
+  }
+
+  function setControlsFromSettings(settings) {
+    rowFitMode.value = settings.fitMode || 'cover';
+    rowOffsetX.value = String(settings.offsetX ?? 0);
+    rowOffsetY.value = String(settings.offsetY ?? 0);
+    rowScaleW.value = String(settings.scaleWidth ?? 100);
+    rowScaleH.value = String(settings.scaleHeight ?? 100);
+    rowImageX.value = String(settings.imageX ?? 16);
+    rowImageY.value = String(settings.imageY ?? 18);
+    rowImageW.value = String(settings.imageWidth ?? 68);
+    rowImageH.value = String(settings.imageHeight ?? 61);
+    rowTitleX.value = String(settings.titleX ?? 51);
+    rowTitleY.value = String(settings.titleY ?? 34);
+    rowTitleW.value = String(settings.titleWidth ?? 36);
+    rowTitleSize.value = String(settings.titleSize ?? 40);
+  }
+
+  function readSettingsFromControls() {
+    return {
+      fitMode: rowFitMode.value === 'contain' ? 'contain' : 'cover',
+      offsetX: clampNumber(rowOffsetX.value, -100, 100, 0),
+      offsetY: clampNumber(rowOffsetY.value, -100, 100, 0),
+      scaleWidth: clampNumber(rowScaleW.value, 20, 300, 100),
+      scaleHeight: clampNumber(rowScaleH.value, 20, 300, 100),
+      imageX: clampNumber(rowImageX.value, 0, 100, 16),
+      imageY: clampNumber(rowImageY.value, 0, 100, 18),
+      imageWidth: clampNumber(rowImageW.value, 1, 100, 68),
+      imageHeight: clampNumber(rowImageH.value, 1, 100, 61),
+      titleX: clampNumber(rowTitleX.value, 0, 100, 51),
+      titleY: clampNumber(rowTitleY.value, 0, 100, 34),
+      titleWidth: clampNumber(rowTitleW.value, 1, 100, 36),
+      titleSize: clampNumber(rowTitleSize.value, 8, 120, 40),
+    };
+  }
+
+  function applySelectedFrameToMainPreview() {
+    const frame = getSelectedFrame();
+    if (!frame) return;
+    const settings = frame.settings;
+    applyImageRenderToNode(selectedSceneImage, settings);
+    applySceneLayoutToPreviewNode(selectedScenePreview, settings);
+    selectedSceneTitle.textContent = normalizeBoardTitle(titleInput.value.trim());
+    if (wrapper.dataset.imageData) {
+      selectedSceneImage.src = wrapper.dataset.imageData;
+      selectedSceneImage.classList.add('is-visible');
+    } else {
+      selectedSceneImage.removeAttribute('src');
+      selectedSceneImage.classList.remove('is-visible');
+    }
+    selectedSceneLabel.textContent = `Выбрана сцена: t=${(frame.atMs / 1000).toFixed(frame.atMs % 1000 === 0 ? 0 : 1)}s`;
+    rowReadout.textContent = `x:${settings.offsetX}, y:${settings.offsetY}, w:${settings.scaleWidth}%, h:${settings.scaleHeight}%`;
+    wrapper._sceneSettings = { ...settings };
+  }
+
+  function rebuildSceneFrames() {
+    const previousFrame = getSelectedFrame();
+    const actions = getSceneActionsForNews(textarea.value);
+    const nextFrames = [{ atMs: 0, type: 'start' }, ...actions].map((frame) => {
+      const found = wrapper._sceneFrames.find((item) => item.atMs === frame.atMs && item.type === frame.type);
+      return { ...frame, settings: found?.settings ? { ...found.settings } : { ...defaultNewsSceneSettings } };
+    });
+    wrapper._sceneFrames = nextFrames;
+    const prevIndex = nextFrames.findIndex((frame) => frame.atMs === previousFrame?.atMs && frame.type === previousFrame?.type);
+    wrapper._selectedSceneIndex = prevIndex >= 0 ? prevIndex : 0;
+  }
+
+  function renderNewsSceneTimeline() {
+    sceneTimeline.innerHTML = '';
+    wrapper._sceneFrames.forEach((frame, index) => {
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.className = 'news-scene-timeline-item';
+      if (index === wrapper._selectedSceneIndex) item.classList.add('is-selected');
+      const sec = (frame.atMs / 1000).toFixed(frame.atMs % 1000 === 0 ? 0 : 1);
+      item.innerHTML = `<strong>t=${sec}s</strong><span>${frame.type === 'start' ? 'Базовая сцена' : frame.type}</span>`;
+      item.addEventListener('click', () => {
+        wrapper._selectedSceneIndex = index;
+        setControlsFromSettings(frame.settings);
+        applySelectedFrameToMainPreview();
+        renderNewsSceneTimeline();
+      });
+      sceneTimeline.appendChild(item);
+    });
+  }
 
   const counter = document.createElement('div');
   counter.className = 'news-item-counter';
 
-  const actions = document.createElement('div');
-  actions.className = 'news-item-actions';
-
+  const actionsRow = document.createElement('div');
+  actionsRow.className = 'news-item-actions';
   const moveUpButton = document.createElement('button');
   moveUpButton.type = 'button';
   moveUpButton.textContent = '↑ Поднять выше';
-
   const moveDownButton = document.createElement('button');
   moveDownButton.type = 'button';
   moveDownButton.textContent = '↓ Опустить ниже';
-
   const deleteButton = document.createElement('button');
   deleteButton.type = 'button';
   deleteButton.textContent = '✕ Удалить новость';
+  actionsRow.append(moveUpButton, moveDownButton, deleteButton);
 
   textarea.addEventListener('input', () => {
     updateNewsItemCounter(textarea, counter);
     updateSceneSubtitles();
+    rebuildSceneFrames();
+    renderNewsSceneTimeline();
+    setControlsFromSettings(getSelectedFrame().settings);
+    applySelectedFrameToMainPreview();
   });
   titleInput.addEventListener('input', () => {
-    scenePreviewTitle.textContent = '';
-    if (activeScenePreviewRow === wrapper) {
-      syncSceneFromNewsRow(wrapper);
-    }
+    applySelectedFrameToMainPreview();
   });
   linkInput.addEventListener('input', () => {
     linkInput.setCustomValidity(isValidHttpUrl(linkInput.value.trim()) ? '' : 'Введите ссылку http/https');
@@ -793,86 +884,63 @@ function addSpeechNewsItem(initialValue = '') {
       wrapper.dataset.imageData = '';
       imagePreview.removeAttribute('src');
       imagePreview.classList.remove('is-visible');
-      scenePreviewImage.removeAttribute('src');
-      scenePreviewImage.classList.remove('is-visible');
-      if (activeScenePreviewRow === wrapper) {
-        syncSceneFromNewsRow(wrapper);
-      }
+      applySelectedFrameToMainPreview();
       return;
     }
-
-    fitImageToBoardSlot(file)
+    fitImageToBoardSlot(file, getSelectedFrame().settings)
       .then((result) => {
         wrapper.dataset.imageData = result;
         imagePreview.src = result;
         imagePreview.classList.add('is-visible');
-        scenePreviewImage.src = result;
-        scenePreviewImage.classList.add('is-visible');
-        applyImageRenderToNode(scenePreviewImage);
-        if (activeScenePreviewRow === wrapper) {
-          syncSceneFromNewsRow(wrapper);
-        }
+        applySelectedFrameToMainPreview();
       })
       .catch(() => {
         wrapper.dataset.imageData = '';
         imagePreview.removeAttribute('src');
         imagePreview.classList.remove('is-visible');
-        scenePreviewImage.removeAttribute('src');
-        scenePreviewImage.classList.remove('is-visible');
         imageInput.setCustomValidity('Не удалось обработать изображение. Попробуйте другой файл.');
         imageInput.reportValidity();
-        if (activeScenePreviewRow === wrapper) {
-          syncSceneFromNewsRow(wrapper);
-        }
       });
   });
 
-  wrapper.addEventListener('pointerdown', () => syncSceneFromNewsRow(wrapper));
-  wrapper.addEventListener('focusin', () => syncSceneFromNewsRow(wrapper));
+  rowSettingsBlock.querySelectorAll('input,select').forEach((input) => {
+    input.addEventListener('input', () => {
+      const frame = getSelectedFrame();
+      if (!frame) return;
+      frame.settings = readSettingsFromControls();
+      applySelectedFrameToMainPreview();
+      renderNewsSceneTimeline();
+    });
+  });
 
-  updateNewsItemCounter(textarea, counter);
-  actions.append(moveUpButton, moveDownButton, deleteButton);
-  wrapper.append(label, titleInput, scenePreview, textarea, counter, linkInput, imageInput, imagePreview, actions);
+  wrapper.append(label, titleInput, selectedSceneWrap, sceneTimeline, rowSettingsBlock, textarea, counter, linkInput, imageInput, imagePreview, actionsRow);
   speechNewsItems.appendChild(wrapper);
 
   moveUpButton.addEventListener('click', () => {
     const prev = wrapper.previousElementSibling;
-    if (!prev) {
-      return;
-    }
+    if (!prev) return;
     speechNewsItems.insertBefore(wrapper, prev);
     renumberSpeechNews();
   });
-
   moveDownButton.addEventListener('click', () => {
     const next = wrapper.nextElementSibling;
-    if (!next) {
-      return;
-    }
+    if (!next) return;
     speechNewsItems.insertBefore(next, wrapper);
     renumberSpeechNews();
   });
-
   deleteButton.addEventListener('click', () => {
-    const wasActive = activeScenePreviewRow === wrapper;
     wrapper.remove();
     renumberSpeechNews();
-    const first = speechNewsItems.querySelector('.news-item-row');
-    if (!first) {
-      addSpeechNewsItem();
-      return;
-    }
-    if (wasActive) {
-      syncSceneFromNewsRow(first);
-    }
+    if (!speechNewsItems.querySelector('.news-item-row')) addSpeechNewsItem();
     updateSceneSubtitles();
   });
 
+  updateNewsItemCounter(textarea, counter);
+  rebuildSceneFrames();
+  setControlsFromSettings(getSelectedFrame().settings);
+  renderNewsSceneTimeline();
+  applySelectedFrameToMainPreview();
   renumberSpeechNews();
-  applySceneLayout(episodeFormatInput.value);
-  if (!activeScenePreviewRow) {
-    syncSceneFromNewsRow(wrapper);
-  }
 }
 
 function renumberSpeechNews() {
@@ -1034,34 +1102,25 @@ function applySceneLayout(format) {
     ? 'public/base scene/board_news (horizont).webp'
     : 'public/base scene/board_news.webp';
   const slot = boardSlotConfig[format] || boardSlotConfig['1080x1920'];
-  const left = (slot.imageRect.x / slot.asset.width) * 100;
-  const top = (slot.imageRect.y / slot.asset.height) * 100;
-  boardSlotXInput.value = left.toFixed(1);
-  boardSlotYInput.value = top.toFixed(1);
-  boardSlotWidthInput.value = ((slot.imageRect.width / slot.asset.width) * 100).toFixed(1);
-  boardSlotHeightInput.value = ((slot.imageRect.height / slot.asset.height) * 100).toFixed(1);
-  boardTitleXInput.value = String(parseFloat(slot.title.left));
-  boardTitleYInput.value = String(parseFloat(slot.title.top));
-  boardTitleWidthInput.value = String(parseFloat(slot.title.width));
-  boardTitleSizeInput.value = String(parseFloat(slot.title.size));
 
   const rows = speechNewsItems.querySelectorAll('.news-item-row');
   rows.forEach((row) => {
-    const preview = row.querySelector('.news-scene-preview');
-    const previewBackwall = row.querySelector('.news-scene-preview-layer:nth-child(1)');
-    const previewTable = row.querySelector('.news-scene-preview-layer:nth-child(2)');
-    const previewBoardBase = row.querySelector('.news-scene-preview-board-base');
-    const previewHeadBase = row.querySelector('.news-scene-preview-head-base');
-    if (preview) {
-      preview.classList.toggle('is-horizontal', isHorizontal);
+    row.querySelectorAll('.news-scene-preview').forEach((preview) => preview.classList.toggle('is-horizontal', isHorizontal));
+    row.querySelectorAll('.news-scene-preview-layer').forEach((layer, index) => {
+      if (index % 2 === 0) layer.src = sceneBackwallLayer.src;
+      if (index % 2 === 1) layer.src = sceneTableLayer.src;
+    });
+    row.querySelectorAll('.news-scene-preview-board-base').forEach((node) => { node.src = boardImageBaseLayer.src; });
+    row.querySelectorAll('.news-scene-preview-head-base').forEach((node) => { node.src = boardHeadBaseLayer.src; });
+    if (Array.isArray(row._sceneFrames)) {
+      row._sceneFrames.forEach((frame) => {
+        frame.settings.imageX = Number(((slot.imageRect.x / slot.asset.width) * 100).toFixed(1));
+        frame.settings.imageY = Number(((slot.imageRect.y / slot.asset.height) * 100).toFixed(1));
+        frame.settings.imageWidth = Number(((slot.imageRect.width / slot.asset.width) * 100).toFixed(1));
+        frame.settings.imageHeight = Number(((slot.imageRect.height / slot.asset.height) * 100).toFixed(1));
+      });
     }
-    if (previewBackwall) previewBackwall.src = sceneBackwallLayer.src;
-    if (previewTable) previewTable.src = sceneTableLayer.src;
-    if (previewBoardBase) previewBoardBase.src = boardImageBaseLayer.src;
-    if (previewHeadBase) previewHeadBase.src = boardHeadBaseLayer.src;
   });
-  applySceneLayoutFromControls();
-  updateBoardImagePositionStyle();
 }
 
 function setNeutralMouth() {
@@ -1319,7 +1378,6 @@ function buildEpisodeScript(mode = 'preview') {
   const outro = document.getElementById('outro-text').value.trim();
   const speechTimeline = getSpeechTimelineConfig();
   const speechNews = collectSpeechNewsItems();
-  const sceneLayout = getSceneLayoutSettings();
   const rubrics = getSelectedRubrics();
 
   const script = {
@@ -1349,24 +1407,20 @@ function buildEpisodeScript(mode = 'preview') {
     },
     intro,
     anchor_speech_text: speechText,
-    anchor_speech_news: speechNews.map((item) => ({
-      ...item,
-      title: mode === 'preview' ? '' : item.title,
-    })),
-    scene_layout: {
-      image_slot: {
-        x_percent: sceneLayout.imageX,
-        y_percent: sceneLayout.imageY,
-        width_percent: sceneLayout.imageWidth,
-        height_percent: sceneLayout.imageHeight,
-      },
-      board_title: {
-        x_percent: sceneLayout.titleX,
-        y_percent: sceneLayout.titleY,
-        width_percent: sceneLayout.titleWidth,
-        font_size_px: sceneLayout.titleSize,
-      },
-    },
+    anchor_speech_news: speechNews.map((item) => {
+      const sceneSettings = item.scene_settings || { ...defaultNewsSceneSettings };
+      return {
+        ...item,
+        title: mode === 'preview' ? '' : item.title,
+        scene_settings: sceneSettings,
+        scene_keyframes: (item.scene_frames || []).map((frame) => ({
+          at_ms: frame.atMs || 0,
+          type: frame.type || 'start',
+          duration_ms: frame.duration_ms || 0,
+          settings: frame.settings || { ...defaultNewsSceneSettings },
+        })),
+      };
+    }),
     segments: manualNewsQueue.map((news, idx) => ({
       order: idx + 1,
       type: 'news',
@@ -1416,21 +1470,6 @@ subtitleBoldInput.addEventListener('change', () => updateSceneSubtitles());
 document.getElementById('subtitle-font-size').addEventListener('input', () => updateSceneSubtitles());
 document.getElementById('intro-text').addEventListener('input', () => updateSceneSubtitles());
 document.getElementById('outro-text').addEventListener('input', () => updateSceneSubtitles());
-boardImageFitModeInput.addEventListener('change', updateBoardImagePositionStyle);
-boardImageOffsetXInput.addEventListener('input', updateBoardImagePositionStyle);
-boardImageOffsetYInput.addEventListener('input', updateBoardImagePositionStyle);
-boardImageScaleWidthInput.addEventListener('input', updateBoardImagePositionStyle);
-boardImageScaleHeightInput.addEventListener('input', updateBoardImagePositionStyle);
-[
-  boardSlotXInput,
-  boardSlotYInput,
-  boardSlotWidthInput,
-  boardSlotHeightInput,
-  boardTitleXInput,
-  boardTitleYInput,
-  boardTitleWidthInput,
-  boardTitleSizeInput,
-].forEach((input) => input.addEventListener('input', applySceneLayoutFromControls));
 subtitleJoystick.addEventListener('click', (event) => {
   const button = event.target.closest('[data-move]');
   if (!button) return;
@@ -1456,7 +1495,6 @@ fillRubricSelect();
 addRubricButton.disabled = true;
 renderCommandsHelp();
 applySubtitlePosition();
-updateBoardImagePositionStyle();
 if (document.getElementById('rubrics').classList.contains('is-active') || !tubeLeaderboardLoaded) {
   loadTubeLeaderboard();
 }

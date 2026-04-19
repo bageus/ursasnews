@@ -13,10 +13,10 @@
     </header>
 
     <nav class="tabs" aria-label="Основные вкладки">
-      <button class="tab is-active" data-tab="news">Лента (ручной отбор)</button>
-      <button class="tab" data-tab="video">Генерация ролика (Фаза 2)</button>
-      <button class="tab" data-tab="rubrics">Рубрики</button>
-      <button class="tab" data-tab="settings">Настройки</button>
+      <button type="button" class="tab is-active" data-tab="news">Лента (ручной отбор)</button>
+      <button type="button" class="tab" data-tab="video">Генерация ролика (Фаза 2)</button>
+      <button type="button" class="tab" data-tab="rubrics">Рубрики</button>
+      <button type="button" class="tab" data-tab="settings">Настройки</button>
     </nav>
 
     <main class="container">
@@ -151,77 +151,6 @@
                 </div>
               </div>
             </div>
-            <div class="settings-block">
-              <h4>Кадр изображения новости</h4>
-              <div class="settings-grid">
-                <label>
-                  Режим подгонки
-                  <select id="board-image-fit-mode">
-                    <option value="cover" selected>Cover (обрезка по краям)</option>
-                    <option value="contain">Contain (без обрезки)</option>
-                  </select>
-                </label>
-                <label>
-                  Смещение X (−100..100)
-                  <input type="range" id="board-image-offset-x" min="-100" max="100" step="1" value="0" />
-                </label>
-                <label>
-                  Смещение Y (−100..100)
-                  <input type="range" id="board-image-offset-y" min="-100" max="100" step="1" value="0" />
-                </label>
-                <label>
-                  Ширина изображения в canvas (%)
-                  <input type="range" id="board-image-scale-width" min="20" max="300" step="1" value="100" />
-                </label>
-                <label>
-                  Высота изображения в canvas (%)
-                  <input type="range" id="board-image-scale-height" min="20" max="300" step="1" value="100" />
-                </label>
-                <div class="board-image-position-readout-wrap">
-                  <span id="board-image-position-readout" class="hint">x: 0, y: 0, w: 100%, h: 100%</span>
-                </div>
-              </div>
-            </div>
-            <div class="settings-block">
-              <h4>Координаты на сцене (точная привязка)</h4>
-              <div class="settings-grid scene-coords-grid">
-                <label>
-                  Изображение: X (%)
-                  <input type="number" id="board-slot-x" min="0" max="100" step="0.1" value="16" />
-                </label>
-                <label>
-                  Изображение: Y (%)
-                  <input type="number" id="board-slot-y" min="0" max="100" step="0.1" value="18" />
-                </label>
-                <label>
-                  Изображение: ширина (%)
-                  <input type="number" id="board-slot-width" min="1" max="100" step="0.1" value="68" />
-                </label>
-                <label>
-                  Изображение: высота (%)
-                  <input type="number" id="board-slot-height" min="1" max="100" step="0.1" value="61" />
-                </label>
-                <label>
-                  Заголовок: X (%)
-                  <input type="number" id="board-title-x" min="0" max="100" step="0.1" value="51" />
-                </label>
-                <label>
-                  Заголовок: Y (%)
-                  <input type="number" id="board-title-y" min="0" max="100" step="0.1" value="34" />
-                </label>
-                <label>
-                  Заголовок: ширина (%)
-                  <input type="number" id="board-title-width" min="1" max="100" step="0.1" value="36" />
-                </label>
-                <label>
-                  Заголовок: размер (px)
-                  <input type="number" id="board-title-size" min="8" max="120" step="1" value="40" />
-                </label>
-                <div class="board-image-position-readout-wrap">
-                  <span id="scene-coords-readout" class="hint">image: x 16%, y 18%, w 68%, h 61% · title: x 51%, y 34%, w 36%, size 40px</span>
-                </div>
-              </div>
-            </div>
             <label>
               <span class="label-row">
                 Интро
@@ -235,6 +164,7 @@
                 <button type="button" id="add-news-item">+ Добавить новость</button>
               </div>
               <div id="speech-news-items" class="news-items"></div>
+              <p class="hint">Настройки кадра и координат теперь задаются отдельно внутри каждой новости.</p>
             </div>
             <div class="rubrics-block">
               <strong>Постоянная рубрика</strong>
@@ -259,7 +189,7 @@
           </form>
 
           <div class="card">
-            <h3>Сцена (последовательность слоев)</h3>
+            <h3>Итоговая сцена (базовое состояние / финальный рендер)</h3>
             <p class="hint">Слои собраны в порядке от фона к переднему плану.</p>
             <div id="scene-stage" class="scene-stage" aria-label="Превью сцены для генерации ролика">
               <img id="scene-backwall-layer" src="public/base scene/backwall.webp" alt="Задняя стена сцены" class="scene-layer" />
