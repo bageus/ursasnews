@@ -411,21 +411,7 @@ async function fitImageToBoardSlot(file, settings = defaultNewsSceneSettings) {
 
   const srcWidth = sourceImage.width;
   const srcHeight = sourceImage.height;
-  const safeOffsetX = Math.max(-100, Math.min(100, offsetX)) / 100;
-  const safeOffsetY = Math.max(-100, Math.min(100, offsetY)) / 100;
-  const safeScaleX = Math.max(20, Math.min(300, scaleWidth)) / 100;
-  const safeScaleY = Math.max(20, Math.min(300, scaleHeight)) / 100;
-  const baseScale =
-    fitMode === 'contain'
-      ? Math.min(targetWidth / srcWidth, targetHeight / srcHeight)
-      : Math.max(targetWidth / srcWidth, targetHeight / srcHeight);
-  const drawWidth = Math.round(srcWidth * baseScale * safeScaleX);
-  const drawHeight = Math.round(srcHeight * baseScale * safeScaleY);
-  const freeShiftX = Math.abs(drawWidth - targetWidth) / 2;
-  const freeShiftY = Math.abs(drawHeight - targetHeight) / 2;
-  const dx = Math.round((targetWidth - drawWidth) / 2 + freeShiftX * safeOffsetX);
-  const dy = Math.round((targetHeight - drawHeight) / 2 + freeShiftY * safeOffsetY);
-  ctx.drawImage(sourceImage, 0, 0, srcWidth, srcHeight, dx, dy, drawWidth, drawHeight);
+  ctx.drawImage(sourceImage, 0, 0, srcWidth, srcHeight, 0, 0, targetWidth, targetHeight);
   return canvas.toDataURL('image/webp', 0.92);
 }
 
@@ -839,6 +825,40 @@ function addSpeechNewsItem(initialValue = '') {
 
   const counter = document.createElement('div');
   counter.className = 'news-item-counter';
+  const rowReadout = rowSettingsBlock.querySelector('.row-scene-readout');
+  const rowFitMode = rowSettingsBlock.querySelector('.row-fit-mode');
+  const rowOffsetX = rowSettingsBlock.querySelector('.row-offset-x');
+  const rowOffsetY = rowSettingsBlock.querySelector('.row-offset-y');
+  const rowScaleW = rowSettingsBlock.querySelector('.row-scale-w');
+  const rowScaleH = rowSettingsBlock.querySelector('.row-scale-h');
+  const rowImageX = rowSettingsBlock.querySelector('.row-image-x');
+  const rowImageY = rowSettingsBlock.querySelector('.row-image-y');
+  const rowImageW = rowSettingsBlock.querySelector('.row-image-w');
+  const rowImageH = rowSettingsBlock.querySelector('.row-image-h');
+  const rowTitleX = rowSettingsBlock.querySelector('.row-title-x');
+  const rowTitleY = rowSettingsBlock.querySelector('.row-title-y');
+  const rowTitleW = rowSettingsBlock.querySelector('.row-title-w');
+  const rowTitleSize = rowSettingsBlock.querySelector('.row-title-size');
+
+  function syncNewsScenePreview() {
+    rowSceneSettings.fitMode = rowFitMode.value === 'contain' ? 'contain' : 'cover';
+    rowSceneSettings.offsetX = clampNumber(rowOffsetX.value, -100, 100, 0);
+    rowSceneSettings.offsetY = clampNumber(rowOffsetY.value, -100, 100, 0);
+    rowSceneSettings.scaleWidth = clampNumber(rowScaleW.value, 20, 300, 100);
+    rowSceneSettings.scaleHeight = clampNumber(rowScaleH.value, 20, 300, 100);
+    rowSceneSettings.imageX = clampNumber(rowImageX.value, 0, 100, 16);
+    rowSceneSettings.imageY = clampNumber(rowImageY.value, 0, 100, 18);
+    rowSceneSettings.imageWidth = clampNumber(rowImageW.value, 1, 100, 68);
+    rowSceneSettings.imageHeight = clampNumber(rowImageH.value, 1, 100, 61);
+    rowSceneSettings.titleX = clampNumber(rowTitleX.value, 0, 100, 51);
+    rowSceneSettings.titleY = clampNumber(rowTitleY.value, 0, 100, 34);
+    rowSceneSettings.titleWidth = clampNumber(rowTitleW.value, 1, 100, 36);
+    rowSceneSettings.titleSize = clampNumber(rowTitleSize.value, 8, 120, 40);
+    applyImageRenderToNode(scenePreviewImage, rowSceneSettings);
+    applySceneLayoutToPreviewNode(scenePreview, rowSceneSettings);
+    rowReadout.textContent = `x:${rowSceneSettings.offsetX}, y:${rowSceneSettings.offsetY}, w:${rowSceneSettings.scaleWidth}%, h:${rowSceneSettings.scaleHeight}%`;
+    wrapper._sceneSettings = { ...rowSceneSettings };
+  }
 
   const actionsRow = document.createElement('div');
   actionsRow.className = 'news-item-actions';
