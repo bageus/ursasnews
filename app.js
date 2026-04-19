@@ -730,55 +730,43 @@ function addSpeechNewsItem(initialValue = '') {
       <div class="board-image-position-readout-wrap"><span class="hint row-scene-readout"></span></div>
     </div>
   `;
-  const rowFitMode = sceneSettingsPanel.querySelector('.row-fit-mode');
-  const rowOffsetX = sceneSettingsPanel.querySelector('.row-offset-x');
-  const rowOffsetY = sceneSettingsPanel.querySelector('.row-offset-y');
-  const rowScaleW = sceneSettingsPanel.querySelector('.row-scale-w');
-  const rowScaleH = sceneSettingsPanel.querySelector('.row-scale-h');
-  const rowImageX = sceneSettingsPanel.querySelector('.row-image-x');
-  const rowImageY = sceneSettingsPanel.querySelector('.row-image-y');
-  const rowImageW = sceneSettingsPanel.querySelector('.row-image-w');
-  const rowImageH = sceneSettingsPanel.querySelector('.row-image-h');
-  const rowTitleX = sceneSettingsPanel.querySelector('.row-title-x');
-  const rowTitleY = sceneSettingsPanel.querySelector('.row-title-y');
-  const rowTitleW = sceneSettingsPanel.querySelector('.row-title-w');
-  const rowTitleSize = sceneSettingsPanel.querySelector('.row-title-size');
+  const getControl = (selector) => sceneSettingsPanel.querySelector(selector);
 
   function getSelectedFrame() {
     return wrapper._sceneFrames[wrapper._selectedSceneIndex] || wrapper._sceneFrames[0];
   }
 
   function setControlsFromSettings(settings) {
-    rowFitMode.value = settings.fitMode || 'cover';
-    rowOffsetX.value = String(settings.offsetX ?? 0);
-    rowOffsetY.value = String(settings.offsetY ?? 0);
-    rowScaleW.value = String(settings.scaleWidth ?? 100);
-    rowScaleH.value = String(settings.scaleHeight ?? 100);
-    rowImageX.value = String(settings.imageX ?? 16);
-    rowImageY.value = String(settings.imageY ?? 18);
-    rowImageW.value = String(settings.imageWidth ?? 68);
-    rowImageH.value = String(settings.imageHeight ?? 61);
-    rowTitleX.value = String(settings.titleX ?? 51);
-    rowTitleY.value = String(settings.titleY ?? 34);
-    rowTitleW.value = String(settings.titleWidth ?? 36);
-    rowTitleSize.value = String(settings.titleSize ?? 40);
+    getControl('.row-fit-mode').value = settings.fitMode || 'cover';
+    getControl('.row-offset-x').value = String(settings.offsetX ?? 0);
+    getControl('.row-offset-y').value = String(settings.offsetY ?? 0);
+    getControl('.row-scale-w').value = String(settings.scaleWidth ?? 100);
+    getControl('.row-scale-h').value = String(settings.scaleHeight ?? 100);
+    getControl('.row-image-x').value = String(settings.imageX ?? 16);
+    getControl('.row-image-y').value = String(settings.imageY ?? 18);
+    getControl('.row-image-w').value = String(settings.imageWidth ?? 68);
+    getControl('.row-image-h').value = String(settings.imageHeight ?? 61);
+    getControl('.row-title-x').value = String(settings.titleX ?? 51);
+    getControl('.row-title-y').value = String(settings.titleY ?? 34);
+    getControl('.row-title-w').value = String(settings.titleWidth ?? 36);
+    getControl('.row-title-size').value = String(settings.titleSize ?? 40);
   }
 
   function readSettingsFromControls() {
     return {
-      fitMode: rowFitMode.value === 'contain' ? 'contain' : 'cover',
-      offsetX: clampNumber(rowOffsetX.value, -100, 100, 0),
-      offsetY: clampNumber(rowOffsetY.value, -100, 100, 0),
-      scaleWidth: clampNumber(rowScaleW.value, 20, 300, 100),
-      scaleHeight: clampNumber(rowScaleH.value, 20, 300, 100),
-      imageX: clampNumber(rowImageX.value, 0, 100, 16),
-      imageY: clampNumber(rowImageY.value, 0, 100, 18),
-      imageWidth: clampNumber(rowImageW.value, 1, 100, 68),
-      imageHeight: clampNumber(rowImageH.value, 1, 100, 61),
-      titleX: clampNumber(rowTitleX.value, 0, 100, 51),
-      titleY: clampNumber(rowTitleY.value, 0, 100, 34),
-      titleWidth: clampNumber(rowTitleW.value, 1, 100, 36),
-      titleSize: clampNumber(rowTitleSize.value, 8, 120, 40),
+      fitMode: getControl('.row-fit-mode').value === 'contain' ? 'contain' : 'cover',
+      offsetX: clampNumber(getControl('.row-offset-x').value, -100, 100, 0),
+      offsetY: clampNumber(getControl('.row-offset-y').value, -100, 100, 0),
+      scaleWidth: clampNumber(getControl('.row-scale-w').value, 20, 300, 100),
+      scaleHeight: clampNumber(getControl('.row-scale-h').value, 20, 300, 100),
+      imageX: clampNumber(getControl('.row-image-x').value, 0, 100, 16),
+      imageY: clampNumber(getControl('.row-image-y').value, 0, 100, 18),
+      imageWidth: clampNumber(getControl('.row-image-w').value, 1, 100, 68),
+      imageHeight: clampNumber(getControl('.row-image-h').value, 1, 100, 61),
+      titleX: clampNumber(getControl('.row-title-x').value, 0, 100, 51),
+      titleY: clampNumber(getControl('.row-title-y').value, 0, 100, 34),
+      titleWidth: clampNumber(getControl('.row-title-w').value, 1, 100, 36),
+      titleSize: clampNumber(getControl('.row-title-size').value, 8, 120, 40),
     };
   }
 
