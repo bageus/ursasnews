@@ -370,34 +370,84 @@ button:hover {
 
 .news-scene-preview {
   width: min(100%, 280px);
+  aspect-ratio: 9 / 16;
+  position: relative;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: #0f1530;
+  background: #050814;
   overflow: hidden;
 }
 
+.news-scene-preview.is-horizontal {
+  aspect-ratio: 16 / 9;
+}
+
+.news-scene-preview-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.news-scene-preview-board {
+  position: absolute;
+  inset: 0;
+}
+
+.news-scene-preview-board-base {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
 .news-scene-preview-title {
-  min-height: 42px;
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--border);
-  background: #1a2346;
-  color: #fff;
+  position: absolute;
+  z-index: 2;
+  top: var(--board-title-top, 34%);
+  left: var(--board-title-left, 51%);
+  width: var(--board-title-width, 36%);
+  transform: translate(-50%, -50%);
+  color: #fff6cf;
   text-align: center;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
+  font-family: 'Arial Black', Impact, 'Montserrat', sans-serif;
+  font-size: clamp(8px, 1.4vw, 11px);
+  font-weight: 900;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  line-height: 1.2;
+  line-height: 1.05;
+  text-shadow:
+    0 1px 0 #8c5b00,
+    0 2px 0 #784500,
+    0 4px 8px rgba(0, 0, 0, 0.5);
   overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .news-scene-preview-image-wrap {
-  aspect-ratio: 16 / 9;
+  position: absolute;
+  inset: var(--board-image-slot-inset, 18% 16% 21% 16%);
+  border-radius: 6px;
+  overflow: hidden;
   background: rgba(255, 255, 255, 0.05);
+  cursor: grab;
+}
+
+.news-scene-preview-image-wrap:active {
+  cursor: grabbing;
 }
 
 .news-scene-preview-image {
   display: none;
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
