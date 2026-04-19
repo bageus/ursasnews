@@ -1,26 +1,35 @@
-const tabs = document.querySelectorAll('.tab');
-const panels = document.querySelectorAll('.panel');
+const tabs = Array.from(document.querySelectorAll('.tab'));
+const panels = Array.from(document.querySelectorAll('.panel'));
+
+function activateTab(tabId) {
+  const tab = tabs.find((candidate) => candidate.dataset.tab === tabId);
+  const nextPanel = panels.find((panel) => panel.id === tabId);
+  if (!tab || !nextPanel) {
+    return;
+  }
+
+  tabs.forEach((item) => item.classList.remove('is-active'));
+  panels.forEach((panel) => panel.classList.remove('is-active'));
+
+  tab.classList.add('is-active');
+  nextPanel.classList.add('is-active');
+
+  if (tabId === 'rubrics') {
+    loadTubeLeaderboard();
+  }
+}
 
 tabs.forEach((tab) => {
   tab.addEventListener('click', (event) => {
     event.preventDefault();
-    const tabId = tab.dataset.tab;
-    const nextPanel = document.getElementById(tabId);
-    if (!nextPanel) {
-      return;
-    }
-
-    tabs.forEach((t) => t.classList.remove('is-active'));
-    panels.forEach((p) => p.classList.remove('is-active'));
-
-    tab.classList.add('is-active');
-    nextPanel.classList.add('is-active');
-
-    if (tabId === 'rubrics') {
-      loadTubeLeaderboard();
-    }
+    activateTab(tab.dataset.tab);
   });
 });
+
+if (window.location.hash) {
+  const hashTabId = window.location.hash.replace('#', '');
+  activateTab(hashTabId);
+}
 
 const manualNewsForm = document.getElementById('manual-news-form');
 const newsList = document.getElementById('news-list');
@@ -825,40 +834,6 @@ function addSpeechNewsItem(initialValue = '') {
 
   const counter = document.createElement('div');
   counter.className = 'news-item-counter';
-  const rowReadout = rowSettingsBlock.querySelector('.row-scene-readout');
-  const rowFitMode = rowSettingsBlock.querySelector('.row-fit-mode');
-  const rowOffsetX = rowSettingsBlock.querySelector('.row-offset-x');
-  const rowOffsetY = rowSettingsBlock.querySelector('.row-offset-y');
-  const rowScaleW = rowSettingsBlock.querySelector('.row-scale-w');
-  const rowScaleH = rowSettingsBlock.querySelector('.row-scale-h');
-  const rowImageX = rowSettingsBlock.querySelector('.row-image-x');
-  const rowImageY = rowSettingsBlock.querySelector('.row-image-y');
-  const rowImageW = rowSettingsBlock.querySelector('.row-image-w');
-  const rowImageH = rowSettingsBlock.querySelector('.row-image-h');
-  const rowTitleX = rowSettingsBlock.querySelector('.row-title-x');
-  const rowTitleY = rowSettingsBlock.querySelector('.row-title-y');
-  const rowTitleW = rowSettingsBlock.querySelector('.row-title-w');
-  const rowTitleSize = rowSettingsBlock.querySelector('.row-title-size');
-
-  function syncNewsScenePreview() {
-    rowSceneSettings.fitMode = rowFitMode.value === 'contain' ? 'contain' : 'cover';
-    rowSceneSettings.offsetX = clampNumber(rowOffsetX.value, -100, 100, 0);
-    rowSceneSettings.offsetY = clampNumber(rowOffsetY.value, -100, 100, 0);
-    rowSceneSettings.scaleWidth = clampNumber(rowScaleW.value, 20, 300, 100);
-    rowSceneSettings.scaleHeight = clampNumber(rowScaleH.value, 20, 300, 100);
-    rowSceneSettings.imageX = clampNumber(rowImageX.value, 0, 100, 16);
-    rowSceneSettings.imageY = clampNumber(rowImageY.value, 0, 100, 18);
-    rowSceneSettings.imageWidth = clampNumber(rowImageW.value, 1, 100, 68);
-    rowSceneSettings.imageHeight = clampNumber(rowImageH.value, 1, 100, 61);
-    rowSceneSettings.titleX = clampNumber(rowTitleX.value, 0, 100, 51);
-    rowSceneSettings.titleY = clampNumber(rowTitleY.value, 0, 100, 34);
-    rowSceneSettings.titleWidth = clampNumber(rowTitleW.value, 1, 100, 36);
-    rowSceneSettings.titleSize = clampNumber(rowTitleSize.value, 8, 120, 40);
-    applyImageRenderToNode(scenePreviewImage, rowSceneSettings);
-    applySceneLayoutToPreviewNode(scenePreview, rowSceneSettings);
-    rowReadout.textContent = `x:${rowSceneSettings.offsetX}, y:${rowSceneSettings.offsetY}, w:${rowSceneSettings.scaleWidth}%, h:${rowSceneSettings.scaleHeight}%`;
-    wrapper._sceneSettings = { ...rowSceneSettings };
-  }
 
   const actionsRow = document.createElement('div');
   actionsRow.className = 'news-item-actions';
