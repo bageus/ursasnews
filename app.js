@@ -61,6 +61,7 @@ const boardNewsMode = document.getElementById('board-news-mode');
 const boardHeadBaseLayer = document.getElementById('board-head-base-layer');
 const boardImageBaseLayer = document.getElementById('board-image-base-layer');
 const boardImageSlot = document.getElementById('board-image-slot');
+const boardImageSlotHomeParent = boardImageSlot?.parentElement || null;
 const boardNewsTitle = document.getElementById('board-news-title');
 const boardNewsImagePreview = document.getElementById('board-news-image-preview');
 const tubeLeaderboardList = document.getElementById('tube-leaderboard-list');
@@ -568,11 +569,17 @@ function updateSceneSubtitles(currentText = '', nextText = '', forceClear = fals
 
 function setBoardFront() {
   boardLayer.classList.add('is-front');
+  if (boardImageSlot.parentElement !== boardNewsMode) {
+    boardNewsMode.appendChild(boardImageSlot);
+  }
   boardImageSlot.classList.add('is-front');
 }
 
 function setBoardBack() {
   boardLayer.classList.remove('is-front');
+  if (boardImageSlotHomeParent && boardImageSlot.parentElement !== boardImageSlotHomeParent) {
+    boardImageSlotHomeParent.insertBefore(boardImageSlot, boardImageBaseLayer);
+  }
   boardImageSlot.classList.remove('is-front');
 }
 
@@ -590,23 +597,57 @@ function splitSentences(text) {
   return (text.match(/[^.!?]+[.!?]?/g) || []).map((s) => s.trim()).filter(Boolean);
 }
 
+function splitSubtitleChunks(text, maxWords = 10) {
+  const tokens = (text || '').match(/[\p{L}\p{N}-]+|[.,!?;:]/gu) || [];
+  const chunks = [];
+  let current = [];
+  let wordsCount = 0;
+
+  tokens.forEach((token) => {
+    const isPunctuation = /^[.,!?;:]$/.test(token);
+    if (isPunctuation) {
+      if (current.length > 0) {
+        current[current.length - 1] = `${current[current.length - 1]}${token}`;
+        chunks.push(current.join(' '));
+        current = [];
+        wordsCount = 0;
+      }
+      return;
+    }
+
+    current.push(token);
+    wordsCount += 1;
+    if (wordsCount >= maxWords) {
+      chunks.push(current.join(' '));
+      current = [];
+      wordsCount = 0;
+    }
+  });
+
+  if (current.length > 0) {
+    chunks.push(current.join(' '));
+  }
+
+  return chunks;
+}
+
 function scheduleSubtitles(text, totalMs) {
   clearSubtitleTimers();
 
-  const sentences = splitSentences(text);
-  if (sentences.length === 0) {
+  const chunks = splitSubtitleChunks(text, 10);
+  if (chunks.length === 0) {
     updateSceneSubtitles('', '');
     return;
   }
 
-  const wordCounts = sentences.map((sentence) => Math.max(1, getWordsCount(sentence)));
+  const wordCounts = chunks.map((chunk) => Math.max(1, getWordsCount(chunk)));
   const totalWords = wordCounts.reduce((sum, count) => sum + count, 0);
   let cursor = 0;
 
-  sentences.forEach((sentence, index) => {
-    const nextSentence = sentences[index + 1] || '';
+  chunks.forEach((chunk, index) => {
+    const nextChunk = chunks[index + 1] || '';
     const id = setTimeout(() => {
-      updateSceneSubtitles(sentence, nextSentence);
+      updateSceneSubtitles(chunk, nextChunk);
     }, cursor);
     subtitleTimerIds.push(id);
 
