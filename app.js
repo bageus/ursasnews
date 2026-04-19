@@ -71,13 +71,26 @@ const commandsOverlay = document.getElementById('commands-overlay');
 const commandsClose = document.getElementById('commands-close');
 const commandsList = document.getElementById('commands-list');
 const helpButtons = document.querySelectorAll('[data-help="commands"]');
+const rubricsGrid = document.getElementById('rubrics-grid');
+const rubricEditorOverlay = document.getElementById('rubric-editor-overlay');
+const rubricEditorTitle = document.getElementById('rubric-editor-title');
+const rubricEditorText = document.getElementById('rubric-editor-text');
+const rubricEditorSave = document.getElementById('rubric-editor-save');
+const rubricEditorClose = document.getElementById('rubric-editor-close');
+const rubricViewOverlay = document.getElementById('rubric-view-overlay');
+const rubricViewTitle = document.getElementById('rubric-view-title');
+const rubricViewContent = document.getElementById('rubric-view-content');
+const rubricViewClose = document.getElementById('rubric-view-close');
 
 const manualNewsQueue = [];
 let mouthPreviewTimerIds = [];
 let subtitleTimerIds = [];
 let speechNewsIndex = 0;
 let tubeLeaderboardLoaded = false;
+let activeRubricType = '';
 const subtitlePosition = { x: 0, y: 0 };
+const RUBRIC_DESCRIPTIONS_KEY = 'ursasnews_rubric_descriptions_v1';
+let rubricDescriptions = {};
 const BOARD_NEWS_IMAGE_RECT = { x: 164, y: 276, width: 696, height: 937 };
 const boardSlotConfig = {
   '1080x1920': {
@@ -1126,6 +1139,7 @@ function getSelectedRubrics() {
   return Array.from(links).map((link) => ({
     type: link.dataset.rubricType,
     title: link.textContent.trim(),
+    description: rubricDescriptions[link.dataset.rubricType] || '',
     enabled: true,
   }));
 }
@@ -1154,6 +1168,67 @@ function addSelectedRubric() {
   selectedRubrics.appendChild(link);
   rubricSelect.value = '';
   addRubricButton.disabled = true;
+}
+
+function loadRubricDescriptions() {
+  try {
+    rubricDescriptions = JSON.parse(localStorage.getItem(RUBRIC_DESCRIPTIONS_KEY) || '{}') || {};
+  } catch {
+    rubricDescriptions = {};
+  }
+}
+
+function saveRubricDescriptions() {
+  localStorage.setItem(RUBRIC_DESCRIPTIONS_KEY, JSON.stringify(rubricDescriptions));
+}
+
+function renderRubricDescriptions() {
+  if (!rubricsGrid) return;
+  rubricsGrid.querySelectorAll('.rubric-card').forEach((card) => {
+    const type = card.dataset.rubricType;
+    const descriptionNode = card.querySelector('[data-rubric-description]');
+    if (!descriptionNode || !type) return;
+    const text = rubricDescriptions[type] || '';
+    descriptionNode.textContent = text || 'Описание не задано';
+    descriptionNode.classList.toggle('is-empty', !text);
+  });
+}
+
+function openRubricEditor(card) {
+  const type = card?.dataset.rubricType;
+  if (!type) return;
+  const title = card.dataset.rubricTitle || 'Рубрика';
+  activeRubricType = type;
+  rubricEditorTitle.textContent = `Описание: ${title}`;
+  rubricEditorText.value = rubricDescriptions[type] || '';
+  rubricEditorOverlay.classList.add('is-open');
+  rubricEditorText.focus();
+}
+
+function closeRubricEditor() {
+  activeRubricType = '';
+  rubricEditorOverlay.classList.remove('is-open');
+}
+
+function saveActiveRubricDescription() {
+  if (!activeRubricType) return;
+  rubricDescriptions[activeRubricType] = rubricEditorText.value.trim();
+  saveRubricDescriptions();
+  renderRubricDescriptions();
+  closeRubricEditor();
+}
+
+function openRubricView(card) {
+  const type = card?.dataset.rubricType;
+  if (!type) return;
+  const title = card.dataset.rubricTitle || 'Рубрика';
+  rubricViewTitle.textContent = title;
+  rubricViewContent.textContent = rubricDescriptions[type] || 'Описание не задано';
+  rubricViewOverlay.classList.add('is-open');
+}
+
+function closeRubricView() {
+  rubricViewOverlay.classList.remove('is-open');
 }
 
 function setMouthFrame(type, frameIndex) {
@@ -1585,12 +1660,35 @@ subtitleJoystick.addEventListener('click', (event) => {
   applySubtitlePosition();
 });
 tubeLeaderboardReload.addEventListener('click', loadTubeLeaderboard);
+rubricEditorSave.addEventListener('click', saveActiveRubricDescription);
+rubricEditorClose.addEventListener('click', closeRubricEditor);
+rubricEditorOverlay.addEventListener('click', (event) => {
+  if (event.target === rubricEditorOverlay) closeRubricEditor();
+});
+rubricViewClose.addEventListener('click', closeRubricView);
+rubricViewOverlay.addEventListener('click', (event) => {
+  if (event.target === rubricViewOverlay) closeRubricView();
+});
+rubricsGrid.addEventListener('click', (event) => {
+  const editButton = event.target.closest('[data-rubric-edit]');
+  if (editButton) {
+    event.preventDefault();
+    event.stopPropagation();
+    openRubricEditor(editButton.closest('.rubric-card'));
+    return;
+  }
+  const card = event.target.closest('.rubric-card');
+  if (!card) return;
+  openRubricView(card);
+});
 
 setNeutralMouth();
 updateSpeechMode();
 applySceneLayout(episodeFormatInput.value);
 addSpeechNewsItem();
 fillRubricSelect();
+loadRubricDescriptions();
+renderRubricDescriptions();
 addRubricButton.disabled = true;
 renderCommandsHelp();
 applySubtitlePosition();
