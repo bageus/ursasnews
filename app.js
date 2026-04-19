@@ -727,6 +727,11 @@ function addSpeechNewsItem(initialValue = '') {
   const scenePreviewBoard = document.createElement('div');
   scenePreviewBoard.className = 'news-scene-preview-board';
 
+  const scenePreviewHeadBase = document.createElement('img');
+  scenePreviewHeadBase.className = 'news-scene-preview-head-base';
+  scenePreviewHeadBase.alt = 'Плашка заголовка новости';
+  scenePreviewHeadBase.src = boardHeadBaseLayer.src;
+
   const scenePreviewBoardBase = document.createElement('img');
   scenePreviewBoardBase.className = 'news-scene-preview-board-base';
   scenePreviewBoardBase.alt = 'Плашка новости';
@@ -745,7 +750,7 @@ function addSpeechNewsItem(initialValue = '') {
   applyImageRenderToNode(scenePreviewImage);
 
   scenePreviewImageWrap.appendChild(scenePreviewImage);
-  scenePreviewBoard.append(scenePreviewImageWrap, scenePreviewBoardBase, scenePreviewTitle);
+  scenePreviewBoard.append(scenePreviewBoardBase, scenePreviewImageWrap, scenePreviewHeadBase, scenePreviewTitle);
   scenePreview.append(scenePreviewBackwall, scenePreviewTable, scenePreviewBoard);
   bindRealtimeImageDrag(scenePreviewImageWrap);
   wrapper._scenePreviewImage = scenePreviewImage;
@@ -1046,12 +1051,14 @@ function applySceneLayout(format) {
     const previewBackwall = row.querySelector('.news-scene-preview-layer:nth-child(1)');
     const previewTable = row.querySelector('.news-scene-preview-layer:nth-child(2)');
     const previewBoardBase = row.querySelector('.news-scene-preview-board-base');
+    const previewHeadBase = row.querySelector('.news-scene-preview-head-base');
     if (preview) {
       preview.classList.toggle('is-horizontal', isHorizontal);
     }
     if (previewBackwall) previewBackwall.src = sceneBackwallLayer.src;
     if (previewTable) previewTable.src = sceneTableLayer.src;
     if (previewBoardBase) previewBoardBase.src = boardImageBaseLayer.src;
+    if (previewHeadBase) previewHeadBase.src = boardHeadBaseLayer.src;
   });
   applySceneLayoutFromControls();
   updateBoardImagePositionStyle();
