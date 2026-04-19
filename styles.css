@@ -267,6 +267,10 @@ button:hover {
   border-radius: 6px;
 }
 
+.board-image-slot.is-front {
+  z-index: 20;
+}
+
 .board-news-title {
   position: absolute;
   z-index: 2;
