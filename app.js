@@ -730,7 +730,6 @@ function addSpeechNewsItem(initialValue = '') {
       <div class="board-image-position-readout-wrap"><span class="hint row-scene-readout"></span></div>
     </div>
   `;
-  const rowReadout = sceneSettingsPanel.querySelector('.row-scene-readout');
   const rowFitMode = sceneSettingsPanel.querySelector('.row-fit-mode');
   const rowOffsetX = sceneSettingsPanel.querySelector('.row-offset-x');
   const rowOffsetY = sceneSettingsPanel.querySelector('.row-offset-y');
@@ -798,7 +797,10 @@ function addSpeechNewsItem(initialValue = '') {
       selectedSceneImage.classList.remove('is-visible');
     }
     selectedSceneLabel.textContent = `Выбрана сцена: t=${(frame.atMs / 1000).toFixed(frame.atMs % 1000 === 0 ? 0 : 1)}s`;
-    rowReadout.textContent = `x:${settings.offsetX}, y:${settings.offsetY}, w:${settings.scaleWidth}%, h:${settings.scaleHeight}%`;
+    const rowReadoutNode = sceneSettingsPanel.querySelector('.row-scene-readout');
+    if (rowReadoutNode) {
+      rowReadoutNode.textContent = `x:${settings.offsetX}, y:${settings.offsetY}, w:${settings.scaleWidth}%, h:${settings.scaleHeight}%`;
+    }
     wrapper._sceneSettings = { ...settings };
   }
 
