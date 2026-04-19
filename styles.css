@@ -337,6 +337,8 @@ button:hover {
   grid-template-columns: 1fr auto;
   gap: 8px 10px;
   align-items: start;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed var(--border);
 }
 
 .news-item-label {
@@ -376,6 +378,39 @@ button:hover {
   border-radius: 8px;
   background: #050814;
   overflow: hidden;
+}
+
+.news-scene-timeline {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 8px;
+}
+
+.news-scene-timeline-item {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+}
+
+.news-scene-mini {
+  width: min(100%, 220px);
+}
+
+.news-scene-command-badge {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  z-index: 15;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 11px;
+  color: #fff;
+}
+
+.news-item-settings {
+  grid-column: 1 / -1;
 }
 
 .news-scene-preview.is-horizontal {
