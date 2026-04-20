@@ -951,6 +951,35 @@ button:hover {
   color: #ff8f9c;
 }
 
+.crypto-bubbles-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  margin: 10px 0;
+}
+
+.crypto-bubbles-window {
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px;
+  background: #0f1530;
+}
+
+.crypto-bubbles-window h4 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: #d9e4ff;
+}
+
+.crypto-bubbles-frame {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #090d1d;
+}
+
 .row-actions {
   display: flex;
   gap: 8px;

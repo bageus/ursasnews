@@ -99,6 +99,9 @@ const coinLosersStatus = document.getElementById('coin-losers-status');
 const stockMoversGrid = document.getElementById('stock-movers-grid');
 const stockMoversStatus = document.getElementById('stock-movers-status');
 const cryptoBubblesLink = document.getElementById('crypto-bubbles-link');
+const cryptoBubblesPerformanceFrame = document.getElementById('crypto-bubbles-performance-frame');
+const cryptoBubblesMarketCapFrame = document.getElementById('crypto-bubbles-marketcap-frame');
+const cryptoBubblesStatus = document.getElementById('crypto-bubbles-status');
 const ursasIndexValue = document.getElementById('ursas-index');
 const ursasIndexState = document.getElementById('ursas-index-state');
 const ursasIndexFill = document.getElementById('ursas-index-fill');
@@ -240,6 +243,7 @@ const rubricCatalog = [
   { type: 'top_10_coins_gainers', title: 'Top 10 coins gainers' },
   { type: 'top_10_coins_losers', title: 'Top 10 coins losers' },
   { type: 'top_10_stocks', title: 'Top 10 stocks movers' },
+  { type: 'crypto_bubbles', title: 'Crypto bubbles' },
   { type: 'bear_world_news', title: 'Bear-world news' },
   { type: 'bear_language', title: 'Язык медведей' },
   { type: 'roadmap_news', title: 'Roadmap news' },
@@ -1333,10 +1337,7 @@ function saveMoversFilters() {
   const filters = getMoversFilters();
   localStorage.setItem(MARKET_MOVERS_FILTERS_KEY, JSON.stringify(filters));
   moversStatus.textContent = 'Фильтры сохранены в localStorage.';
-  const bubblesCurrency = (filters.vsCurrency || 'usd').toUpperCase();
-  if (cryptoBubblesLink) {
-    cryptoBubblesLink.href = `https://cryptobubbles.net/?theme=dark&currency=${encodeURIComponent(bubblesCurrency)}&size=marketcap`;
-  }
+  updateCryptoBubblesEmbeds(filters);
 }
 
 function loadMoversFilters() {
@@ -1347,6 +1348,52 @@ function loadMoversFilters() {
     applyMoversFilters();
   }
   saveMoversFilters();
+}
+
+function buildCryptoBubblesUrl({
+  currency = 'USD',
+  mode = 'performance',
+  absoluteMarketCap = false,
+} = {}) {
+  const url = new URL('https://cryptobubbles.net/');
+  url.searchParams.set('theme', 'dark');
+  url.searchParams.set('currency', String(currency || 'USD').toUpperCase());
+  url.searchParams.set('period', 'day');
+  url.searchParams.set('size', 'marketcap');
+  url.searchParams.set('content', 'marketcap');
+  url.searchParams.set('color', 'performance');
+  url.searchParams.set('view', mode);
+  if (absoluteMarketCap) {
+    url.searchParams.set('marketcap', 'absolute');
+  }
+  return url.toString();
+}
+
+function updateCryptoBubblesEmbeds(filters = {}) {
+  const bubblesCurrency = (filters.vsCurrency || 'usd').toUpperCase();
+  const performanceUrl = buildCryptoBubblesUrl({
+    currency: bubblesCurrency,
+    mode: 'performance',
+    absoluteMarketCap: false,
+  });
+  const marketCapAbsoluteUrl = buildCryptoBubblesUrl({
+    currency: bubblesCurrency,
+    mode: 'marketcap',
+    absoluteMarketCap: true,
+  });
+
+  if (cryptoBubblesLink) {
+    cryptoBubblesLink.href = performanceUrl;
+  }
+  if (cryptoBubblesPerformanceFrame) {
+    cryptoBubblesPerformanceFrame.src = performanceUrl;
+  }
+  if (cryptoBubblesMarketCapFrame) {
+    cryptoBubblesMarketCapFrame.src = marketCapAbsoluteUrl;
+  }
+  if (cryptoBubblesStatus) {
+    cryptoBubblesStatus.textContent = `Параметры: period=day, size=marketcap, content=marketcap, color=performance, currency=${bubblesCurrency}.`;
+  }
 }
 
 function renderMoversList(root, title, items, type) {
