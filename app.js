@@ -99,15 +99,19 @@ const coinLosersStatus = document.getElementById('coin-losers-status');
 const stockMoversGrid = document.getElementById('stock-movers-grid');
 const stockMoversStatus = document.getElementById('stock-movers-status');
 const cryptoBubblesLink = document.getElementById('crypto-bubbles-link');
+const cryptoBubblesFrameCap = document.getElementById('crypto-bubbles-frame-cap');
+const cryptoBubblesFrameDay = document.getElementById('crypto-bubbles-frame-day');
+const cryptoBubblesStatus = document.getElementById('crypto-bubbles-status');
 const rubricEditorOverlay = document.getElementById('rubric-editor-overlay');
 const rubricEditorTitle = document.getElementById('rubric-editor-title');
 const rubricEditorText = document.getElementById('rubric-editor-text');
 const rubricEditorSave = document.getElementById('rubric-editor-save');
 const rubricEditorClose = document.getElementById('rubric-editor-close');
 const rubricViewOverlay = document.getElementById('rubric-view-overlay');
-const rubricViewTitle = document.getElementById('rubric-view-title');
 const rubricViewContent = document.getElementById('rubric-view-content');
-const rubricViewClose = document.getElementById('rubric-view-close');
+const numberOfDayFlip = document.getElementById('number-of-day-flip');
+const numberOfDaySpinButton = document.getElementById('spin-number-of-day');
+const numberOfDayStatus = document.getElementById('number-of-day-status');
 
 const manualNewsQueue = [];
 let editingManualNewsId = null;
@@ -116,6 +120,8 @@ let subtitleTimerIds = [];
 let speechNewsIndex = 0;
 let tubeLeaderboardLoaded = false;
 let activeRubricType = '';
+let numberOfDaySpinTimerIds = [];
+let numberOfDayIsSpinning = false;
 const subtitlePosition = { x: 0, y: 0 };
 const RUBRIC_DESCRIPTIONS_KEY = 'ursasnews_rubric_descriptions_v1';
 const MARKET_MOVERS_FILTERS_KEY = 'ursasnews_market_movers_filters_v1';
@@ -281,6 +287,99 @@ function isValidHttpUrl(value) {
   } catch {
     return false;
   }
+}
+
+function getNumberOfDayValue() {
+  const today = new Date();
+  return today.getDate();
+}
+
+function setFlipDigitText(node, digit) {
+  node.querySelectorAll('text').forEach((textNode) => {
+    textNode.textContent = String(digit);
+  });
+}
+
+function flipDigitTo(digitNode, nextDigit, durationMs) {
+  const currentDigit = Number(digitNode.dataset.digit || 0);
+  const safeNextDigit = Number.isFinite(nextDigit) ? nextDigit : 0;
+  if (currentDigit === safeNextDigit) {
+    return;
+  }
+
+  const topStatic = digitNode.querySelector('.flip-static.top');
+  const bottomStatic = digitNode.querySelector('.flip-static.bottom');
+  const topFlap = digitNode.querySelector('.flip-flap.top');
+  const bottomFlap = digitNode.querySelector('.flip-flap.bottom');
+
+  setFlipDigitText(topStatic, currentDigit);
+  setFlipDigitText(bottomStatic, safeNextDigit);
+  setFlipDigitText(topFlap, currentDigit);
+  setFlipDigitText(bottomFlap, safeNextDigit);
+
+  digitNode.style.setProperty('--flip-duration', `${durationMs}ms`);
+  digitNode.classList.remove('is-flipping');
+  void digitNode.offsetWidth;
+  digitNode.classList.add('is-flipping');
+
+  const finalizeTimer = window.setTimeout(() => {
+    digitNode.classList.remove('is-flipping');
+    setFlipDigitText(topStatic, safeNextDigit);
+    setFlipDigitText(bottomStatic, safeNextDigit);
+    setFlipDigitText(topFlap, safeNextDigit);
+    setFlipDigitText(bottomFlap, safeNextDigit);
+    digitNode.dataset.digit = String(safeNextDigit);
+  }, Math.max(60, durationMs + 30));
+  numberOfDaySpinTimerIds.push(finalizeTimer);
+}
+
+function setFlipClockNumber(value, durationMs = 220) {
+  if (!numberOfDayFlip) return;
+  const safeValue = Math.max(0, Math.min(99, Number(value) || 0));
+  const digits = String(safeValue).padStart(2, '0').split('');
+  const digitNodes = numberOfDayFlip.querySelectorAll('.flip-digit');
+
+  digitNodes.forEach((digitNode, index) => {
+    flipDigitTo(digitNode, Number(digits[index]), durationMs);
+  });
+}
+
+function clearNumberOfDayTimers() {
+  numberOfDaySpinTimerIds.forEach((timerId) => window.clearTimeout(timerId));
+  numberOfDaySpinTimerIds = [];
+}
+
+function runNumberOfDayFlip() {
+  if (!numberOfDayFlip || numberOfDayIsSpinning) return;
+
+  numberOfDayIsSpinning = true;
+  clearNumberOfDayTimers();
+  numberOfDaySpinButton.disabled = true;
+  numberOfDayStatus.textContent = 'Листаем... сначала быстро, потом медленнее.';
+
+  const targetValue = getNumberOfDayValue();
+  const totalSteps = 24 + Math.floor(Math.random() * 9);
+  let delayMs = 70;
+
+  const runStep = (step) => {
+    const isFinalStep = step >= totalSteps - 1;
+    const nextValue = isFinalStep ? targetValue : Math.floor(Math.random() * 100);
+    const flipDuration = Math.max(110, Math.round(delayMs * 0.8));
+    setFlipClockNumber(nextValue, flipDuration);
+
+    if (isFinalStep) {
+      numberOfDayStatus.textContent = `Число дня: ${String(targetValue).padStart(2, '0')}`;
+      numberOfDaySpinButton.disabled = false;
+      numberOfDayIsSpinning = false;
+      return;
+    }
+
+    delayMs = Math.min(Math.round(delayMs * 1.18), 620);
+    const timerId = window.setTimeout(() => runStep(step + 1), delayMs);
+    numberOfDaySpinTimerIds.push(timerId);
+  };
+
+  runStep(0);
 }
 
 function collectSpeechNewsItems() {
@@ -1235,6 +1334,7 @@ function saveMoversFilters() {
   if (cryptoBubblesLink) {
     cryptoBubblesLink.href = `https://cryptobubbles.net/?theme=dark&currency=${encodeURIComponent(bubblesCurrency)}&size=marketcap`;
   }
+  applyCryptoBubblesEmbeds(bubblesCurrency);
 }
 
 function loadMoversFilters() {
@@ -1245,6 +1345,20 @@ function loadMoversFilters() {
     applyMoversFilters();
   }
   saveMoversFilters();
+}
+
+function applyCryptoBubblesEmbeds(currency = 'USD') {
+  const normalizedCurrency = String(currency || 'USD').toUpperCase();
+  if (cryptoBubblesFrameCap) {
+    cryptoBubblesFrameCap.src = `https://cryptobubbles.net/?theme=dark&currency=${encodeURIComponent(normalizedCurrency)}&size=marketcap&period=day`;
+  }
+  if (cryptoBubblesFrameDay) {
+    cryptoBubblesFrameDay.src = `https://cryptobubbles.net/?theme=dark&currency=${encodeURIComponent(normalizedCurrency)}&size=performance&period=day`;
+  }
+  if (cryptoBubblesStatus) {
+    cryptoBubblesStatus.textContent =
+      'Встроенный iframe загружен. Если виден отказ соединения/пустой экран, это ограничение самого сайта по встраиванию — используйте кнопку «Открыть Crypto Bubbles».';
+  }
 }
 
 function renderMoversList(root, title, items, type) {
@@ -1479,15 +1593,17 @@ function saveActiveRubricDescription() {
 }
 
 function openRubricView(card) {
-  const type = card?.dataset.rubricType;
-  if (!type) return;
-  const title = card.dataset.rubricTitle || 'Рубрика';
-  rubricViewTitle.textContent = title;
-  rubricViewContent.textContent = rubricDescriptions[type] || 'Описание не задано';
+  if (!card || !rubricViewContent) return;
+  const viewCard = card.cloneNode(true);
+  viewCard.classList.remove('card');
+  viewCard.classList.add('rubric-card-preview');
+  rubricViewContent.innerHTML = '';
+  rubricViewContent.appendChild(viewCard);
   rubricViewOverlay.classList.add('is-open');
 }
 
 function closeRubricView() {
+  rubricViewContent.innerHTML = '';
   rubricViewOverlay.classList.remove('is-open');
 }
 
@@ -2171,12 +2287,28 @@ moversSaveSettingsButton?.addEventListener('click', () => {
   loadMarketMovers();
 });
 moversRefreshButton?.addEventListener('click', loadMarketMovers);
+numberOfDaySpinButton?.addEventListener('click', runNumberOfDayFlip);
+cryptoBubblesFrameCap?.addEventListener('load', () => {
+  if (!cryptoBubblesStatus) return;
+  cryptoBubblesStatus.textContent = 'Crypto Bubbles iframe загружен.';
+});
+cryptoBubblesFrameDay?.addEventListener('load', () => {
+  if (!cryptoBubblesStatus) return;
+  cryptoBubblesStatus.textContent = 'Crypto Bubbles iframe загружен.';
+});
+cryptoBubblesFrameCap?.addEventListener('error', () => {
+  if (!cryptoBubblesStatus) return;
+  cryptoBubblesStatus.textContent = 'Не удалось загрузить iframe. Используйте кнопку «Открыть Crypto Bubbles».';
+});
+cryptoBubblesFrameDay?.addEventListener('error', () => {
+  if (!cryptoBubblesStatus) return;
+  cryptoBubblesStatus.textContent = 'Не удалось загрузить iframe. Используйте кнопку «Открыть Crypto Bubbles».';
+});
 rubricEditorSave.addEventListener('click', saveActiveRubricDescription);
 rubricEditorClose.addEventListener('click', closeRubricEditor);
 rubricEditorOverlay.addEventListener('click', (event) => {
   if (event.target === rubricEditorOverlay) closeRubricEditor();
 });
-rubricViewClose.addEventListener('click', closeRubricView);
 rubricViewOverlay.addEventListener('click', (event) => {
   if (event.target === rubricViewOverlay) closeRubricView();
 });
@@ -2191,9 +2323,17 @@ rubricsGrid.addEventListener('click', (event) => {
     openRubricEditor(editButton.closest('.rubric-card'));
     return;
   }
-  const card = event.target.closest('.rubric-card');
-  if (!card) return;
-  openRubricView(card);
+  const openButton = event.target.closest('[data-rubric-open]');
+  if (openButton) {
+    event.preventDefault();
+    event.stopPropagation();
+    openRubricView(openButton.closest('.rubric-card'));
+  }
+});
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && rubricViewOverlay.classList.contains('is-open')) {
+    closeRubricView();
+  }
 });
 
 setNeutralMouth();
@@ -2209,6 +2349,7 @@ renderCommandsHelp();
 applySubtitlePosition();
 applySceneSettingsToMainStage(defaultNewsSceneSettings);
 showBaseSubtitlePreview();
+setFlipClockNumber(getNumberOfDayValue(), 0);
 if (document.getElementById('rubrics').classList.contains('is-active') || !tubeLeaderboardLoaded) {
   loadTubeLeaderboard();
   loadMarketMovers();
