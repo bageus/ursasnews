@@ -328,6 +328,32 @@
               data-rubric-action
             >Открыть Crypto Bubbles</a>
           </div>
+          <div class="crypto-bubbles-widget-wrap">
+            <h4>Crypto Bubbles embed</h4>
+            <div class="crypto-bubbles-frames">
+              <iframe
+                id="crypto-bubbles-frame-cap"
+                title="Crypto Bubbles — market cap"
+                src="https://cryptobubbles.net"
+                width="1300"
+                height="800"
+                style="border: none"
+                loading="lazy"
+              ></iframe>
+              <iframe
+                id="crypto-bubbles-frame-day"
+                title="Crypto Bubbles — day performance"
+                src="https://cryptobubbles.net"
+                width="1300"
+                height="800"
+                style="border: none"
+                loading="lazy"
+              ></iframe>
+            </div>
+            <p id="crypto-bubbles-status" class="hint">
+              Если iframe блокируется, используйте кнопку «Открыть Crypto Bubbles» (сайт может запрещать встраивание в некоторых средах).
+            </p>
+          </div>
           <p class="hint" id="movers-status">Данные ещё не загружались.</p>
         </div>
         <div id="rubrics-grid" class="grid-2">
@@ -355,53 +381,53 @@
               <div id="number-of-day-flip" class="flip-clock" aria-label="Flip clock для числа дня">
                 <div class="flip-digit" data-digit="0">
                   <div class="flip-static top">
-                    <svg viewBox="0 0 100 60" role="presentation" aria-hidden="true">
+                    <svg viewBox="0 0 100 120" role="presentation" aria-hidden="true">
                       <rect width="100" height="60" rx="8"></rect>
-                      <text x="50" y="47" text-anchor="middle">0</text>
+                      <text x="50" y="60" text-anchor="middle" dominant-baseline="middle">0</text>
                     </svg>
                   </div>
                   <div class="flip-static bottom">
-                    <svg viewBox="0 0 100 60" role="presentation" aria-hidden="true">
+                    <svg viewBox="0 0 100 120" role="presentation" aria-hidden="true">
                       <rect width="100" height="60" rx="8"></rect>
-                      <text x="50" y="47" text-anchor="middle">0</text>
+                      <text x="50" y="60" text-anchor="middle" dominant-baseline="middle">0</text>
                     </svg>
                   </div>
                   <div class="flip-flap top">
-                    <svg viewBox="0 0 100 60" role="presentation" aria-hidden="true">
+                    <svg viewBox="0 0 100 120" role="presentation" aria-hidden="true">
                       <rect width="100" height="60" rx="8"></rect>
-                      <text x="50" y="47" text-anchor="middle">0</text>
+                      <text x="50" y="60" text-anchor="middle" dominant-baseline="middle">0</text>
                     </svg>
                   </div>
                   <div class="flip-flap bottom">
-                    <svg viewBox="0 0 100 60" role="presentation" aria-hidden="true">
+                    <svg viewBox="0 0 100 120" role="presentation" aria-hidden="true">
                       <rect width="100" height="60" rx="8"></rect>
-                      <text x="50" y="47" text-anchor="middle">0</text>
+                      <text x="50" y="60" text-anchor="middle" dominant-baseline="middle">0</text>
                     </svg>
                   </div>
                 </div>
                 <div class="flip-digit" data-digit="0">
                   <div class="flip-static top">
-                    <svg viewBox="0 0 100 60" role="presentation" aria-hidden="true">
+                    <svg viewBox="0 0 100 120" role="presentation" aria-hidden="true">
                       <rect width="100" height="60" rx="8"></rect>
-                      <text x="50" y="47" text-anchor="middle">0</text>
+                      <text x="50" y="60" text-anchor="middle" dominant-baseline="middle">0</text>
                     </svg>
                   </div>
                   <div class="flip-static bottom">
-                    <svg viewBox="0 0 100 60" role="presentation" aria-hidden="true">
+                    <svg viewBox="0 0 100 120" role="presentation" aria-hidden="true">
                       <rect width="100" height="60" rx="8"></rect>
-                      <text x="50" y="47" text-anchor="middle">0</text>
+                      <text x="50" y="60" text-anchor="middle" dominant-baseline="middle">0</text>
                     </svg>
                   </div>
                   <div class="flip-flap top">
-                    <svg viewBox="0 0 100 60" role="presentation" aria-hidden="true">
+                    <svg viewBox="0 0 100 120" role="presentation" aria-hidden="true">
                       <rect width="100" height="60" rx="8"></rect>
-                      <text x="50" y="47" text-anchor="middle">0</text>
+                      <text x="50" y="60" text-anchor="middle" dominant-baseline="middle">0</text>
                     </svg>
                   </div>
                   <div class="flip-flap bottom">
-                    <svg viewBox="0 0 100 60" role="presentation" aria-hidden="true">
+                    <svg viewBox="0 0 100 120" role="presentation" aria-hidden="true">
                       <rect width="100" height="60" rx="8"></rect>
-                      <text x="50" y="47" text-anchor="middle">0</text>
+                      <text x="50" y="60" text-anchor="middle" dominant-baseline="middle">0</text>
                     </svg>
                   </div>
                 </div>
@@ -441,39 +467,6 @@
             <h3>Top-10 акций: рост и падение (день)</h3>
             <div id="stock-movers-grid" class="movers-grid"></div>
             <p class="hint" id="stock-movers-status">Загрузка ещё не запускалась.</p>
-            <p class="rubric-description" data-rubric-description></p>
-          </div>
-          <div class="card rubric-card" data-rubric-type="crypto_bubbles" data-rubric-title="Crypto Bubbles">
-            <button type="button" class="rubric-edit-btn" data-rubric-edit title="Добавить описание">✏️</button>
-            <h3>Crypto Bubbles (24h, USD)</h3>
-            <p class="hint">
-              Period: day · Bubble size: Market cap · Bubble content: Market cap · Bubble color: performance.
-            </p>
-            <div class="crypto-bubbles-grid">
-              <article class="crypto-bubbles-window">
-                <h4>Performance (цвет по динамике, 24h)</h4>
-                <iframe
-                  id="crypto-bubbles-performance-frame"
-                  class="crypto-bubbles-frame"
-                  title="Crypto Bubbles Performance view"
-                  loading="lazy"
-                  referrerpolicy="no-referrer"
-                ></iframe>
-              </article>
-              <article class="crypto-bubbles-window">
-                <h4>Market Cap (absolute)</h4>
-                <iframe
-                  id="crypto-bubbles-marketcap-frame"
-                  class="crypto-bubbles-frame"
-                  title="Crypto Bubbles Market Cap absolute view"
-                  loading="lazy"
-                  referrerpolicy="no-referrer"
-                ></iframe>
-              </article>
-            </div>
-            <p id="crypto-bubbles-status" class="hint">
-              Если виджеты не загружаются внутри страницы, используйте кнопку «Открыть Crypto Bubbles».
-            </p>
             <p class="rubric-description" data-rubric-description></p>
           </div>
           <div class="card rubric-card" data-rubric-type="bear_world_news" data-rubric-title="Bear-world fallback">
