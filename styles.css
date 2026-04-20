@@ -787,28 +787,105 @@ button:hover {
   font-style: italic;
 }
 
-.ursas-index-value {
-  margin: 0;
-  font-size: 44px;
-  font-weight: 800;
-  line-height: 1;
+.number-of-day-widget {
+  display: grid;
+  gap: 12px;
 }
 
-.ursas-index-meter {
-  margin-top: 10px;
+.flip-clock {
+  display: flex;
+  gap: 10px;
+}
+
+.flip-digit {
+  --flip-duration: 220ms;
+  position: relative;
+  width: 74px;
+  height: 92px;
+  perspective: 500px;
+}
+
+.flip-static,
+.flip-flap {
+  position: absolute;
+  left: 0;
   width: 100%;
-  height: 12px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: linear-gradient(90deg, #4bbf73 0%, #f0c14b 50%, #db5b66 100%);
+  height: 50%;
   overflow: hidden;
 }
 
-.ursas-index-fill {
-  width: 50%;
-  height: 100%;
-  background: rgba(255, 255, 255, 0.35);
-  transition: width 180ms ease;
+.flip-static.top,
+.flip-flap.top {
+  top: 0;
+}
+
+.flip-static.bottom,
+.flip-flap.bottom {
+  top: 50%;
+}
+
+.flip-static svg,
+.flip-flap svg {
+  width: 100%;
+  height: 92px;
+  display: block;
+}
+
+.flip-static.bottom svg,
+.flip-flap.bottom svg {
+  transform: translateY(-46px);
+}
+
+.flip-clock rect {
+  fill: #111935;
+  stroke: #2f3863;
+  stroke-width: 2;
+}
+
+.flip-clock text {
+  font-size: 52px;
+  font-weight: 800;
+  fill: #eef2ff;
+  font-family: Inter, system-ui, sans-serif;
+}
+
+.flip-flap {
+  backface-visibility: hidden;
+  z-index: 3;
+}
+
+.flip-flap.top {
+  transform-origin: bottom center;
+}
+
+.flip-flap.bottom {
+  transform-origin: top center;
+  transform: rotateX(90deg);
+}
+
+.flip-digit.is-flipping .flip-flap.top {
+  animation: flip-top var(--flip-duration) ease-in forwards;
+}
+
+.flip-digit.is-flipping .flip-flap.bottom {
+  animation: flip-bottom var(--flip-duration) ease-out forwards;
+  animation-delay: calc(var(--flip-duration) * 0.48);
+}
+
+#number-of-day-status {
+  align-self: center;
+}
+
+@keyframes flip-top {
+  to {
+    transform: rotateX(-90deg);
+  }
+}
+
+@keyframes flip-bottom {
+  to {
+    transform: rotateX(0deg);
+  }
 }
 
 .rubric-editor-modal {

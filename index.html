@@ -345,7 +345,66 @@
           <div class="card rubric-card" data-rubric-type="number_of_day" data-rubric-title="Число дня">
             <button type="button" class="rubric-edit-btn" data-rubric-edit title="Добавить описание">✏️</button>
             <h3>Число дня</h3>
-            <p id="number-of-day">7</p>
+            <div class="number-of-day-widget">
+              <div id="number-of-day-flip" class="flip-clock" aria-label="Flip clock для числа дня">
+                <div class="flip-digit" data-digit="0">
+                  <div class="flip-static top">
+                    <svg viewBox="0 0 100 60" role="presentation" aria-hidden="true">
+                      <rect width="100" height="60" rx="8"></rect>
+                      <text x="50" y="47" text-anchor="middle">0</text>
+                    </svg>
+                  </div>
+                  <div class="flip-static bottom">
+                    <svg viewBox="0 0 100 60" role="presentation" aria-hidden="true">
+                      <rect width="100" height="60" rx="8"></rect>
+                      <text x="50" y="47" text-anchor="middle">0</text>
+                    </svg>
+                  </div>
+                  <div class="flip-flap top">
+                    <svg viewBox="0 0 100 60" role="presentation" aria-hidden="true">
+                      <rect width="100" height="60" rx="8"></rect>
+                      <text x="50" y="47" text-anchor="middle">0</text>
+                    </svg>
+                  </div>
+                  <div class="flip-flap bottom">
+                    <svg viewBox="0 0 100 60" role="presentation" aria-hidden="true">
+                      <rect width="100" height="60" rx="8"></rect>
+                      <text x="50" y="47" text-anchor="middle">0</text>
+                    </svg>
+                  </div>
+                </div>
+                <div class="flip-digit" data-digit="0">
+                  <div class="flip-static top">
+                    <svg viewBox="0 0 100 60" role="presentation" aria-hidden="true">
+                      <rect width="100" height="60" rx="8"></rect>
+                      <text x="50" y="47" text-anchor="middle">0</text>
+                    </svg>
+                  </div>
+                  <div class="flip-static bottom">
+                    <svg viewBox="0 0 100 60" role="presentation" aria-hidden="true">
+                      <rect width="100" height="60" rx="8"></rect>
+                      <text x="50" y="47" text-anchor="middle">0</text>
+                    </svg>
+                  </div>
+                  <div class="flip-flap top">
+                    <svg viewBox="0 0 100 60" role="presentation" aria-hidden="true">
+                      <rect width="100" height="60" rx="8"></rect>
+                      <text x="50" y="47" text-anchor="middle">0</text>
+                    </svg>
+                  </div>
+                  <div class="flip-flap bottom">
+                    <svg viewBox="0 0 100 60" role="presentation" aria-hidden="true">
+                      <rect width="100" height="60" rx="8"></rect>
+                      <text x="50" y="47" text-anchor="middle">0</text>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <div class="row-actions">
+                <button type="button" id="spin-number-of-day">Запустить flip</button>
+                <span id="number-of-day-status" class="hint">Готово к анимации.</span>
+              </div>
+            </div>
             <p class="rubric-description" data-rubric-description></p>
           </div>
           <div class="card rubric-card" data-rubric-type="top_10_coins_gainers" data-rubric-title="Top-10 монет роста">
