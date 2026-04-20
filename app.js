@@ -16,7 +16,7 @@ function activateTab(tabId) {
 
   if (tabId === 'rubrics') {
     loadTubeLeaderboard();
-    loadMarketMovers();
+    marketMoversController?.load();
   }
 }
 
@@ -99,25 +99,13 @@ const coinLosersStatus = document.getElementById('coin-losers-status');
 const stockMoversGrid = document.getElementById('stock-movers-grid');
 const stockMoversStatus = document.getElementById('stock-movers-status');
 const cryptoBubblesLink = document.getElementById('crypto-bubbles-link');
-<<<<<<< codex/add-flip-clock-animation-for-day-number-czqvx5
 const cryptoBubblesFrameCap = document.getElementById('crypto-bubbles-frame-cap');
 const cryptoBubblesFrameDay = document.getElementById('crypto-bubbles-frame-day');
-const cryptoBubblesStatus = document.getElementById('crypto-bubbles-status');
-=======
-<<<<<<< codex/add-flip-clock-animation-for-day-number-g2ui6e
-const cryptoBubblesFrameCap = document.getElementById('crypto-bubbles-frame-cap');
-const cryptoBubblesFrameDay = document.getElementById('crypto-bubbles-frame-day');
-const cryptoBubblesStatus = document.getElementById('crypto-bubbles-status');
-=======
-const cryptoBubblesPerformanceFrame = document.getElementById('crypto-bubbles-performance-frame');
-const cryptoBubblesMarketCapFrame = document.getElementById('crypto-bubbles-marketcap-frame');
 const cryptoBubblesStatus = document.getElementById('crypto-bubbles-status');
 const ursasIndexValue = document.getElementById('ursas-index');
 const ursasIndexState = document.getElementById('ursas-index-state');
 const ursasIndexFill = document.getElementById('ursas-index-fill');
 const ursasIndexBreakdown = document.getElementById('ursas-index-breakdown');
->>>>>>> main
->>>>>>> main
 const rubricEditorOverlay = document.getElementById('rubric-editor-overlay');
 const rubricEditorTitle = document.getElementById('rubric-editor-title');
 const rubricEditorText = document.getElementById('rubric-editor-text');
@@ -136,12 +124,11 @@ let subtitleTimerIds = [];
 let speechNewsIndex = 0;
 let tubeLeaderboardLoaded = false;
 let activeRubricType = '';
-let numberOfDaySpinTimerIds = [];
-let numberOfDayIsSpinning = false;
 const subtitlePosition = { x: 0, y: 0 };
 const RUBRIC_DESCRIPTIONS_KEY = 'ursasnews_rubric_descriptions_v1';
-const MARKET_MOVERS_FILTERS_KEY = 'ursasnews_market_movers_filters_v1';
 let rubricDescriptions = {};
+let marketMoversController = null;
+let numberOfDayController = null;
 const monitoringProviders = [
   { id: 'x', title: 'X', mode: 'account', hint: 'Добавьте @аккаунт или ссылку на профиль.' },
   { id: 'reddit', title: 'Reddit', mode: 'account', hint: 'Добавьте сабреддит или профиль, например r/cryptocurrency.' },
@@ -304,99 +291,6 @@ function isValidHttpUrl(value) {
   } catch {
     return false;
   }
-}
-
-function getNumberOfDayValue() {
-  const today = new Date();
-  return today.getDate();
-}
-
-function setFlipDigitText(node, digit) {
-  node.querySelectorAll('text').forEach((textNode) => {
-    textNode.textContent = String(digit);
-  });
-}
-
-function flipDigitTo(digitNode, nextDigit, durationMs) {
-  const currentDigit = Number(digitNode.dataset.digit || 0);
-  const safeNextDigit = Number.isFinite(nextDigit) ? nextDigit : 0;
-  if (currentDigit === safeNextDigit) {
-    return;
-  }
-
-  const topStatic = digitNode.querySelector('.flip-static.top');
-  const bottomStatic = digitNode.querySelector('.flip-static.bottom');
-  const topFlap = digitNode.querySelector('.flip-flap.top');
-  const bottomFlap = digitNode.querySelector('.flip-flap.bottom');
-
-  setFlipDigitText(topStatic, currentDigit);
-  setFlipDigitText(bottomStatic, safeNextDigit);
-  setFlipDigitText(topFlap, currentDigit);
-  setFlipDigitText(bottomFlap, safeNextDigit);
-
-  digitNode.style.setProperty('--flip-duration', `${durationMs}ms`);
-  digitNode.classList.remove('is-flipping');
-  void digitNode.offsetWidth;
-  digitNode.classList.add('is-flipping');
-
-  const finalizeTimer = window.setTimeout(() => {
-    digitNode.classList.remove('is-flipping');
-    setFlipDigitText(topStatic, safeNextDigit);
-    setFlipDigitText(bottomStatic, safeNextDigit);
-    setFlipDigitText(topFlap, safeNextDigit);
-    setFlipDigitText(bottomFlap, safeNextDigit);
-    digitNode.dataset.digit = String(safeNextDigit);
-  }, Math.max(60, durationMs + 30));
-  numberOfDaySpinTimerIds.push(finalizeTimer);
-}
-
-function setFlipClockNumber(value, durationMs = 220) {
-  if (!numberOfDayFlip) return;
-  const safeValue = Math.max(0, Math.min(99, Number(value) || 0));
-  const digits = String(safeValue).padStart(2, '0').split('');
-  const digitNodes = numberOfDayFlip.querySelectorAll('.flip-digit');
-
-  digitNodes.forEach((digitNode, index) => {
-    flipDigitTo(digitNode, Number(digits[index]), durationMs);
-  });
-}
-
-function clearNumberOfDayTimers() {
-  numberOfDaySpinTimerIds.forEach((timerId) => window.clearTimeout(timerId));
-  numberOfDaySpinTimerIds = [];
-}
-
-function runNumberOfDayFlip() {
-  if (!numberOfDayFlip || numberOfDayIsSpinning) return;
-
-  numberOfDayIsSpinning = true;
-  clearNumberOfDayTimers();
-  numberOfDaySpinButton.disabled = true;
-  numberOfDayStatus.textContent = 'Листаем... сначала быстро, потом медленнее.';
-
-  const targetValue = getNumberOfDayValue();
-  const totalSteps = 24 + Math.floor(Math.random() * 9);
-  let delayMs = 70;
-
-  const runStep = (step) => {
-    const isFinalStep = step >= totalSteps - 1;
-    const nextValue = isFinalStep ? targetValue : Math.floor(Math.random() * 100);
-    const flipDuration = Math.max(110, Math.round(delayMs * 0.8));
-    setFlipClockNumber(nextValue, flipDuration);
-
-    if (isFinalStep) {
-      numberOfDayStatus.textContent = `Число дня: ${String(targetValue).padStart(2, '0')}`;
-      numberOfDaySpinButton.disabled = false;
-      numberOfDayIsSpinning = false;
-      return;
-    }
-
-    delayMs = Math.min(Math.round(delayMs * 1.18), 620);
-    const timerId = window.setTimeout(() => runStep(step + 1), delayMs);
-    numberOfDaySpinTimerIds.push(timerId);
-  };
-
-  runStep(0);
 }
 
 function collectSpeechNewsItems() {
@@ -1297,293 +1191,6 @@ async function loadTubeLeaderboard() {
   }
 }
 
-function toNumberOrNull(value) {
-  if (value === '' || value === null || value === undefined) return null;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-function formatCompactUsd(value) {
-  if (!Number.isFinite(value)) return '—';
-  return new Intl.NumberFormat('ru-RU', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 0,
-    notation: 'compact',
-  }).format(value);
-}
-
-function formatPercent(value) {
-  if (!Number.isFinite(value)) return '—';
-  return `${value > 0 ? '+' : ''}${value.toFixed(2)}%`;
-}
-
-function getMoversFilters() {
-  return {
-    vsCurrency: (moversVsCurrencyInput?.value || 'usd').trim().toLowerCase() || 'usd',
-    stockApiKey: (moversStockApiKeyInput?.value || 'demo').trim() || 'demo',
-    minCoinCap: toNumberOrNull(moversMinCoinCapInput?.value),
-    maxCoinCap: toNumberOrNull(moversMaxCoinCapInput?.value),
-    minCoinLiquidity: Math.max(0, toNumberOrNull(moversMinCoinLiquidityInput?.value) ?? 0),
-    minStockCap: toNumberOrNull(moversMinStockCapInput?.value),
-    maxStockCap: toNumberOrNull(moversMaxStockCapInput?.value),
-    minStockVolume: Math.max(0, toNumberOrNull(moversMinStockVolumeInput?.value) ?? 0),
-  };
-}
-
-function applyMoversFilters(filters = {}) {
-  if (!moversVsCurrencyInput) return;
-  moversVsCurrencyInput.value = filters.vsCurrency || 'usd';
-  moversStockApiKeyInput.value = filters.stockApiKey || '';
-  moversMinCoinCapInput.value = Number.isFinite(filters.minCoinCap) ? filters.minCoinCap : '';
-  moversMaxCoinCapInput.value = Number.isFinite(filters.maxCoinCap) ? filters.maxCoinCap : '';
-  moversMinCoinLiquidityInput.value = Number.isFinite(filters.minCoinLiquidity) ? filters.minCoinLiquidity : 0.01;
-  moversMinStockCapInput.value = Number.isFinite(filters.minStockCap) ? filters.minStockCap : '';
-  moversMaxStockCapInput.value = Number.isFinite(filters.maxStockCap) ? filters.maxStockCap : '';
-  moversMinStockVolumeInput.value = Number.isFinite(filters.minStockVolume) ? filters.minStockVolume : '';
-}
-
-function saveMoversFilters() {
-  const filters = getMoversFilters();
-  localStorage.setItem(MARKET_MOVERS_FILTERS_KEY, JSON.stringify(filters));
-  moversStatus.textContent = 'Фильтры сохранены в localStorage.';
-<<<<<<< codex/add-flip-clock-animation-for-day-number-g2ui6e
-  const bubblesCurrency = (filters.vsCurrency || 'usd').toUpperCase();
-  if (cryptoBubblesLink) {
-    cryptoBubblesLink.href = `https://cryptobubbles.net/?theme=dark&currency=${encodeURIComponent(bubblesCurrency)}&size=marketcap`;
-  }
-  applyCryptoBubblesEmbeds(bubblesCurrency);
-<<<<<<< codex/add-flip-clock-animation-for-day-number-czqvx5
-=======
-=======
-  updateCryptoBubblesEmbeds(filters);
->>>>>>> main
->>>>>>> main
-}
-
-function loadMoversFilters() {
-  try {
-    const raw = JSON.parse(localStorage.getItem(MARKET_MOVERS_FILTERS_KEY) || '{}') || {};
-    applyMoversFilters(raw);
-  } catch {
-    applyMoversFilters();
-  }
-  saveMoversFilters();
-}
-
-<<<<<<< codex/add-flip-clock-animation-for-day-number-czqvx5
-=======
-<<<<<<< codex/add-flip-clock-animation-for-day-number-g2ui6e
->>>>>>> main
-function applyCryptoBubblesEmbeds(currency = 'USD') {
-  const normalizedCurrency = String(currency || 'USD').toUpperCase();
-  if (cryptoBubblesFrameCap) {
-    cryptoBubblesFrameCap.src = `https://cryptobubbles.net/?theme=dark&currency=${encodeURIComponent(normalizedCurrency)}&size=marketcap&period=day`;
-  }
-  if (cryptoBubblesFrameDay) {
-    cryptoBubblesFrameDay.src = `https://cryptobubbles.net/?theme=dark&currency=${encodeURIComponent(normalizedCurrency)}&size=performance&period=day`;
-  }
-  if (cryptoBubblesStatus) {
-    cryptoBubblesStatus.textContent =
-      'Встроенный iframe загружен. Если виден отказ соединения/пустой экран, это ограничение самого сайта по встраиванию — используйте кнопку «Открыть Crypto Bubbles».';
-<<<<<<< codex/add-flip-clock-animation-for-day-number-czqvx5
-=======
-=======
-function buildCryptoBubblesUrl({
-  currency = 'USD',
-  mode = 'performance',
-  absoluteMarketCap = false,
-} = {}) {
-  const url = new URL('https://cryptobubbles.net/');
-  url.searchParams.set('theme', 'dark');
-  url.searchParams.set('currency', String(currency || 'USD').toUpperCase());
-  url.searchParams.set('period', 'day');
-  url.searchParams.set('size', 'marketcap');
-  url.searchParams.set('content', 'marketcap');
-  url.searchParams.set('color', 'performance');
-  url.searchParams.set('view', mode);
-  if (absoluteMarketCap) {
-    url.searchParams.set('marketcap', 'absolute');
-  }
-  return url.toString();
-}
-
-function updateCryptoBubblesEmbeds(filters = {}) {
-  const bubblesCurrency = (filters.vsCurrency || 'usd').toUpperCase();
-  const performanceUrl = buildCryptoBubblesUrl({
-    currency: bubblesCurrency,
-    mode: 'performance',
-    absoluteMarketCap: false,
-  });
-  const marketCapAbsoluteUrl = buildCryptoBubblesUrl({
-    currency: bubblesCurrency,
-    mode: 'marketcap',
-    absoluteMarketCap: true,
-  });
-
-  if (cryptoBubblesLink) {
-    cryptoBubblesLink.href = performanceUrl;
-  }
-  if (cryptoBubblesPerformanceFrame) {
-    cryptoBubblesPerformanceFrame.src = performanceUrl;
-  }
-  if (cryptoBubblesMarketCapFrame) {
-    cryptoBubblesMarketCapFrame.src = marketCapAbsoluteUrl;
-  }
-  if (cryptoBubblesStatus) {
-    cryptoBubblesStatus.textContent = `Параметры: period=day, size=marketcap, content=marketcap, color=performance, currency=${bubblesCurrency}.`;
->>>>>>> main
->>>>>>> main
-  }
-}
-
-function renderMoversList(root, title, items, type) {
-  const group = document.createElement('div');
-  group.className = 'movers-group';
-  const heading = document.createElement('h4');
-  heading.textContent = title;
-  const list = document.createElement('ol');
-  list.className = 'movers-list';
-
-  items.forEach((item) => {
-    const li = document.createElement('li');
-    const moveClass = item.change >= 0 ? 'up' : 'down';
-    li.innerHTML = `<strong>${item.symbol}</strong> ${item.name ? `(${item.name})` : ''} — <span class="${moveClass}">${formatPercent(item.change)}</span> · cap ${formatCompactUsd(item.marketCap)}`;
-    if (type === 'stock' && Number.isFinite(item.volume)) {
-      li.innerHTML += ` · vol ${new Intl.NumberFormat('ru-RU').format(item.volume)}`;
-    }
-    list.appendChild(li);
-  });
-
-  group.append(heading, list);
-  root.appendChild(group);
-}
-
-function parseFmpChangePercent(rawValue) {
-  if (typeof rawValue === 'number') return rawValue;
-  if (typeof rawValue !== 'string') return NaN;
-  return Number(rawValue.replace(/[()%+\s]/g, ''));
-}
-
-async function fetchCoinMovers(filters) {
-  const url = new URL(`${COINGECKO_API_URL}/coins/markets`);
-  url.searchParams.set('vs_currency', filters.vsCurrency || 'usd');
-  url.searchParams.set('order', 'market_cap_desc');
-  url.searchParams.set('per_page', '250');
-  url.searchParams.set('page', '1');
-  url.searchParams.set('sparkline', 'false');
-  url.searchParams.set('price_change_percentage', '24h');
-  const response = await fetch(url.toString(), { headers: { Accept: 'application/json' } });
-  if (!response.ok) throw new Error(`CoinGecko HTTP ${response.status}`);
-  const data = await response.json();
-  const filtered = (Array.isArray(data) ? data : []).filter((coin) => {
-    const cap = Number(coin.market_cap || 0);
-    const volume = Number(coin.total_volume || 0);
-    const liquidity = cap > 0 ? volume / cap : 0;
-    if (Number.isFinite(filters.minCoinCap) && cap < filters.minCoinCap) return false;
-    if (Number.isFinite(filters.maxCoinCap) && cap > filters.maxCoinCap) return false;
-    if (Number.isFinite(filters.minCoinLiquidity) && liquidity < filters.minCoinLiquidity) return false;
-    return Number.isFinite(Number(coin.price_change_percentage_24h));
-  });
-
-  const mapped = filtered.map((coin) => ({
-    symbol: String(coin.symbol || '').toUpperCase(),
-    name: coin.name || '',
-    change: Number(coin.price_change_percentage_24h || 0),
-    marketCap: Number(coin.market_cap || 0),
-  }));
-
-  return {
-    gainers: [...mapped].sort((a, b) => b.change - a.change).slice(0, 10),
-    losers: [...mapped].sort((a, b) => a.change - b.change).slice(0, 10),
-  };
-}
-
-async function fetchStockMovers(filters) {
-  const apiKey = filters.stockApiKey || 'demo';
-  const [gainersResp, losersResp] = await Promise.all([
-    fetch(`${FMP_API_URL}/stock_market/gainers?apikey=${encodeURIComponent(apiKey)}`),
-    fetch(`${FMP_API_URL}/stock_market/losers?apikey=${encodeURIComponent(apiKey)}`),
-  ]);
-  if (!gainersResp.ok || !losersResp.ok) {
-    throw new Error(`FMP HTTP ${gainersResp.status}/${losersResp.status}`);
-  }
-  const gainersRaw = await gainersResp.json();
-  const losersRaw = await losersResp.json();
-
-  const baseList = [...(Array.isArray(gainersRaw) ? gainersRaw : []), ...(Array.isArray(losersRaw) ? losersRaw : [])];
-  const uniqueSymbols = [...new Set(baseList.map((item) => item.symbol).filter(Boolean))].slice(0, 80);
-  let quoteBySymbol = {};
-  if (uniqueSymbols.length > 0) {
-    const quoteResp = await fetch(`${FMP_API_URL}/quote/${uniqueSymbols.join(',')}?apikey=${encodeURIComponent(apiKey)}`);
-    if (quoteResp.ok) {
-      const quotes = await quoteResp.json();
-      quoteBySymbol = Object.fromEntries((Array.isArray(quotes) ? quotes : []).map((quote) => [quote.symbol, quote]));
-    }
-  }
-
-  const normalize = (entry) => {
-    const quote = quoteBySymbol[entry.symbol] || {};
-    return {
-      symbol: entry.symbol,
-      name: entry.name || quote.name || '',
-      change: parseFmpChangePercent(entry.changesPercentage),
-      marketCap: Number(quote.marketCap || entry.marketCap || 0),
-      volume: Number(quote.volume || entry.volume || 0),
-    };
-  };
-
-  const filtered = baseList
-    .map(normalize)
-    .filter((item) => Number.isFinite(item.change))
-    .filter((item) => {
-      if (Number.isFinite(filters.minStockCap) && item.marketCap < filters.minStockCap) return false;
-      if (Number.isFinite(filters.maxStockCap) && item.marketCap > filters.maxStockCap) return false;
-      if (Number.isFinite(filters.minStockVolume) && item.volume < filters.minStockVolume) return false;
-      return true;
-    });
-
-  return {
-    gainers: filtered.filter((item) => item.change >= 0).sort((a, b) => b.change - a.change).slice(0, 10),
-    losers: filtered.filter((item) => item.change < 0).sort((a, b) => a.change - b.change).slice(0, 10),
-  };
-}
-
-async function loadMarketMovers() {
-  if (!coinGainersGrid || !coinLosersGrid || !stockMoversGrid) return;
-  const filters = getMoversFilters();
-  moversStatus.textContent = 'Загружаю топы монет и акций...';
-  coinGainersStatus.textContent = 'Загрузка монет роста...';
-  coinLosersStatus.textContent = 'Загрузка монет падения...';
-  stockMoversStatus.textContent = 'Загрузка акций...';
-  coinGainersGrid.innerHTML = '';
-  coinLosersGrid.innerHTML = '';
-  stockMoversGrid.innerHTML = '';
-
-  const [coinsResult, stocksResult] = await Promise.allSettled([fetchCoinMovers(filters), fetchStockMovers(filters)]);
-  if (coinsResult.status === 'fulfilled') {
-    renderMoversList(coinGainersGrid, '🚀 Топ-10 растущих монет', coinsResult.value.gainers, 'coin');
-    renderMoversList(coinLosersGrid, '🔻 Топ-10 падающих монет', coinsResult.value.losers, 'coin');
-    const updatedAt = new Date().toLocaleTimeString('ru-RU');
-    coinGainersStatus.textContent = `Монеты роста обновлены (${updatedAt}).`;
-    coinLosersStatus.textContent = `Монеты падения обновлены (${updatedAt}).`;
-  } else {
-    const errorMessage = `Ошибка монет: ${coinsResult.reason?.message || coinsResult.reason}`;
-    coinGainersStatus.textContent = errorMessage;
-    coinLosersStatus.textContent = errorMessage;
-  }
-
-  if (stocksResult.status === 'fulfilled') {
-    renderMoversList(stockMoversGrid, '📈 Топ-10 растущих акций', stocksResult.value.gainers, 'stock');
-    renderMoversList(stockMoversGrid, '📉 Топ-10 падающих акций', stocksResult.value.losers, 'stock');
-    stockMoversStatus.textContent = `Акции обновлены (${new Date().toLocaleTimeString('ru-RU')}).`;
-  } else {
-    stockMoversStatus.textContent = `Ошибка акций: ${stocksResult.reason?.message || stocksResult.reason}`;
-  }
-
-  moversStatus.textContent = 'Обновление завершено. Если акции не загрузились — проверьте FMP API key.';
-}
-
 function getSelectedRubrics() {
   const links = selectedRubrics.querySelectorAll('a[data-rubric-type]');
   return Array.from(links).map((link) => ({
@@ -2377,6 +1984,41 @@ monitorTargetForm.addEventListener('submit', (event) => {
 mouthPreviewButton.addEventListener('click', startMouthPreview);
 mouthStopButton.addEventListener('click', stopMouthPreview);
 speechModeInput.addEventListener('change', updateSpeechMode);
+marketMoversController = window.UrsasMarketMovers?.createController({
+  refs: {
+    moversVsCurrencyInput,
+    moversStockApiKeyInput,
+    moversMinCoinCapInput,
+    moversMaxCoinCapInput,
+    moversMinCoinLiquidityInput,
+    moversMinStockCapInput,
+    moversMaxStockCapInput,
+    moversMinStockVolumeInput,
+    moversStatus,
+    coinGainersGrid,
+    coinGainersStatus,
+    coinLosersGrid,
+    coinLosersStatus,
+    stockMoversGrid,
+    stockMoversStatus,
+    cryptoBubblesLink,
+    cryptoBubblesFrameCap,
+    cryptoBubblesFrameDay,
+    cryptoBubblesStatus,
+  },
+  api: {
+    coingeckoBaseUrl: COINGECKO_API_URL,
+    fmpBaseUrl: FMP_API_URL,
+  },
+});
+marketMoversController?.bindFrameStatusEvents();
+
+numberOfDayController = window.UrsasNumberOfDay?.createController({
+  flipRoot: numberOfDayFlip,
+  spinButton: numberOfDaySpinButton,
+  statusNode: numberOfDayStatus,
+});
+
 episodeFormatInput.addEventListener('change', () => applySceneLayout(episodeFormatInput.value));
 addNewsItemButton.addEventListener('click', () => addSpeechNewsItem());
 addRubricButton.addEventListener('click', addSelectedRubric);
@@ -2412,37 +2054,9 @@ subtitleJoystick.addEventListener('click', (event) => {
   applySubtitlePosition();
 });
 tubeLeaderboardReload.addEventListener('click', loadTubeLeaderboard);
-moversSaveSettingsButton?.addEventListener('click', () => {
-  saveMoversFilters();
-  loadMarketMovers();
-});
-moversRefreshButton?.addEventListener('click', loadMarketMovers);
-numberOfDaySpinButton?.addEventListener('click', runNumberOfDayFlip);
-<<<<<<< codex/add-flip-clock-animation-for-day-number-czqvx5
-=======
-<<<<<<< codex/add-flip-clock-animation-for-day-number-g2ui6e
->>>>>>> main
-cryptoBubblesFrameCap?.addEventListener('load', () => {
-  if (!cryptoBubblesStatus) return;
-  cryptoBubblesStatus.textContent = 'Crypto Bubbles iframe загружен.';
-});
-cryptoBubblesFrameDay?.addEventListener('load', () => {
-  if (!cryptoBubblesStatus) return;
-  cryptoBubblesStatus.textContent = 'Crypto Bubbles iframe загружен.';
-});
-cryptoBubblesFrameCap?.addEventListener('error', () => {
-  if (!cryptoBubblesStatus) return;
-  cryptoBubblesStatus.textContent = 'Не удалось загрузить iframe. Используйте кнопку «Открыть Crypto Bubbles».';
-});
-cryptoBubblesFrameDay?.addEventListener('error', () => {
-  if (!cryptoBubblesStatus) return;
-  cryptoBubblesStatus.textContent = 'Не удалось загрузить iframe. Используйте кнопку «Открыть Crypto Bubbles».';
-});
-<<<<<<< codex/add-flip-clock-animation-for-day-number-czqvx5
-=======
-=======
->>>>>>> main
->>>>>>> main
+moversSaveSettingsButton?.addEventListener('click', () => marketMoversController?.saveAndReload());
+moversRefreshButton?.addEventListener('click', () => marketMoversController?.load());
+numberOfDaySpinButton?.addEventListener('click', () => numberOfDayController?.runFlip());
 rubricEditorSave.addEventListener('click', saveActiveRubricDescription);
 rubricEditorClose.addEventListener('click', closeRubricEditor);
 rubricEditorOverlay.addEventListener('click', (event) => {
@@ -2480,7 +2094,7 @@ updateSpeechMode();
 applySceneLayout(episodeFormatInput.value);
 addSpeechNewsItem();
 fillRubricSelect();
-loadMoversFilters();
+marketMoversController?.loadFilters();
 loadRubricDescriptions();
 renderRubricDescriptions();
 addRubricButton.disabled = true;
@@ -2488,10 +2102,10 @@ renderCommandsHelp();
 applySubtitlePosition();
 applySceneSettingsToMainStage(defaultNewsSceneSettings);
 showBaseSubtitlePreview();
-setFlipClockNumber(getNumberOfDayValue(), 0);
+numberOfDayController?.init();
 if (document.getElementById('rubrics').classList.contains('is-active') || !tubeLeaderboardLoaded) {
   loadTubeLeaderboard();
-  loadMarketMovers();
+  marketMoversController?.load();
 }
 
 setActiveMonitoringProvider(activeMonitoringProvider);
