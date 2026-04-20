@@ -34,6 +34,9 @@ if (window.location.hash) {
 
 const manualNewsForm = document.getElementById('manual-news-form');
 const newsList = document.getElementById('news-list');
+const manualNewsSubmitButton = manualNewsForm?.querySelector('button[type="submit"]');
+const manualNewsImageInput = document.getElementById('news-image');
+const manualNewsImageFileStatus = document.getElementById('news-image-file-status');
 const monitorProviderTabs = document.getElementById('monitor-provider-tabs');
 const monitorTargetForm = document.getElementById('monitor-target-form');
 const monitorTargetLabel = document.getElementById('monitor-target-label');
@@ -105,6 +108,7 @@ const rubricViewContent = document.getElementById('rubric-view-content');
 const rubricViewClose = document.getElementById('rubric-view-close');
 
 const manualNewsQueue = [];
+let editingManualNewsId = null;
 let mouthPreviewTimerIds = [];
 let subtitleTimerIds = [];
 let speechNewsIndex = 0;
@@ -1082,6 +1086,7 @@ function addSpeechNewsItem(initialValue = '') {
   renderNewsSceneTimeline();
   applySelectedFrameToMainPreview();
   renumberSpeechNews();
+  return wrapper;
 }
 
 function renumberSpeechNews() {
@@ -1781,26 +1786,134 @@ function setActiveMonitoringProvider(providerId) {
   renderMonitoringTargets();
 }
 
-manualNewsForm.addEventListener('submit', (event) => {
+function setManualNewsImageStatus(text = 'Файл не выбран') {
+  if (manualNewsImageFileStatus) {
+    manualNewsImageFileStatus.textContent = text;
+  }
+}
+
+function resetManualNewsFormToCreateMode() {
+  editingManualNewsId = null;
+  manualNewsForm.reset();
+  document.getElementById('news-source').value = 'manual';
+  if (manualNewsSubmitButton) {
+    manualNewsSubmitButton.textContent = 'Добавить новость';
+  }
+  setManualNewsImageStatus();
+}
+
+function openManualNewsInEditMode(newsId) {
+  const item = manualNewsQueue.find((news) => news.id === newsId);
+  if (!item) {
+    return;
+  }
+
+  editingManualNewsId = newsId;
+  document.getElementById('news-title').value = item.title || '';
+  document.getElementById('news-link').value = item.link || '';
+  document.getElementById('news-summary').value = item.summary || '';
+  document.getElementById('news-source').value = item.source || 'manual';
+  document.getElementById('news-tag').value = item.tag || 'рынок';
+  if (manualNewsImageInput) {
+    manualNewsImageInput.value = '';
+  }
+  setManualNewsImageStatus(item.image_name ? `Текущий файл: ${item.image_name}` : 'Текущий файл: не выбран');
+  if (manualNewsSubmitButton) {
+    manualNewsSubmitButton.textContent = 'Сохранить изменения';
+  }
+  manualNewsForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function approveManualNewsForVideo(newsId) {
+  const item = manualNewsQueue.find((news) => news.id === newsId);
+  if (!item) {
+    return;
+  }
+
+  const targetRow = addSpeechNewsItem(item.summary || '');
+  if (!targetRow) {
+    return;
+  }
+
+  const titleInput = targetRow.querySelector('.speech-news-title');
+  const textInput = targetRow.querySelector('.speech-news-text');
+  const linkInput = targetRow.querySelector('.speech-news-link');
+  const imagePreview = targetRow.querySelector('.news-image-preview');
+
+  if (titleInput) titleInput.value = item.title || '';
+  if (textInput) {
+    textInput.value = item.summary || '';
+    textInput.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  if (linkInput) linkInput.value = item.link || '';
+  if (item.image_data) {
+    targetRow.dataset.imageData = item.image_data;
+    if (imagePreview) {
+      imagePreview.src = item.image_data;
+      imagePreview.classList.add('is-visible');
+    }
+  }
+
+  item.approved_for_video = true;
+  renderNewsQueue();
+}
+
+manualNewsForm.addEventListener('submit', async (event) => {
   event.preventDefault();
 
-  const item = {
-    id: Date.now(),
+  const nextItem = {
+    id: editingManualNewsId || Date.now(),
     title: document.getElementById('news-title').value.trim(),
     link: document.getElementById('news-link').value.trim(),
     summary: document.getElementById('news-summary').value.trim(),
     source: document.getElementById('news-source').value.trim() || 'manual',
     tag: document.getElementById('news-tag').value,
+    approved_for_video: false,
   };
 
-  if (!item.title || !item.summary) {
+  if (!nextItem.title || !nextItem.summary) {
     return;
   }
 
-  manualNewsQueue.push(item);
+  const [selectedImage] = manualNewsImageInput?.files || [];
+  if (selectedImage) {
+    try {
+      nextItem.image_data = await fitImageToBoardSlot(selectedImage, defaultNewsSceneSettings);
+      nextItem.image_name = selectedImage.name;
+    } catch {
+      nextItem.image_data = '';
+      nextItem.image_name = '';
+      if (manualNewsImageInput) {
+        manualNewsImageInput.setCustomValidity('Не удалось обработать изображение. Попробуйте другой файл.');
+        manualNewsImageInput.reportValidity();
+      }
+      return;
+    }
+  }
+
+  if (editingManualNewsId) {
+    const index = manualNewsQueue.findIndex((item) => item.id === editingManualNewsId);
+    if (index >= 0) {
+      const previousItem = manualNewsQueue[index];
+      manualNewsQueue[index] = {
+        ...previousItem,
+        ...nextItem,
+        image_data: selectedImage ? nextItem.image_data : (previousItem.image_data || ''),
+        image_name: selectedImage ? nextItem.image_name : (previousItem.image_name || ''),
+      };
+    }
+  } else {
+    manualNewsQueue.push(nextItem);
+  }
+
   renderNewsQueue();
-  manualNewsForm.reset();
-  document.getElementById('news-source').value = 'manual';
+  resetManualNewsFormToCreateMode();
+});
+
+manualNewsImageInput?.addEventListener('change', () => {
+  manualNewsImageInput.setCustomValidity('');
+  const [selectedImage] = manualNewsImageInput.files || [];
+  setManualNewsImageStatus(selectedImage ? `Выбран файл: ${selectedImage.name}` : 'Файл не выбран');
 });
 
 function renderNewsQueue() {
@@ -1815,11 +1928,76 @@ function renderNewsQueue() {
 
   manualNewsQueue.forEach((news, index) => {
     const li = document.createElement('li');
+    li.className = 'news-queue-item';
+
+    const text = document.createElement('div');
+    text.className = 'news-queue-text';
     const linkSuffix = news.link ? ` (ссылка: ${news.link})` : '';
-    li.textContent = `${index + 1}. [${news.tag}] ${news.title}${linkSuffix} — ${news.summary}`;
+    const imageSuffix = news.image_name ? ` [файл: ${news.image_name}]` : '';
+    const approvedSuffix = news.approved_for_video ? ' ✅ Одобрено и добавлено в «Генерация ролика».' : '';
+    text.textContent = `${index + 1}. [${news.tag}] ${news.title}${linkSuffix}${imageSuffix} — ${news.summary}${approvedSuffix}`;
+
+    const actions = document.createElement('div');
+    actions.className = 'news-queue-actions';
+
+    const editButton = document.createElement('button');
+    editButton.type = 'button';
+    editButton.textContent = 'Редактировать';
+    editButton.dataset.newsAction = 'edit';
+    editButton.dataset.newsId = String(news.id);
+
+    const deleteButton = document.createElement('button');
+    deleteButton.type = 'button';
+    deleteButton.textContent = 'Удалить';
+    deleteButton.dataset.newsAction = 'delete';
+    deleteButton.dataset.newsId = String(news.id);
+
+    const approveButton = document.createElement('button');
+    approveButton.type = 'button';
+    approveButton.textContent = news.approved_for_video ? 'Уже одобрено' : 'Одобрить для публикации';
+    approveButton.disabled = !!news.approved_for_video;
+    approveButton.dataset.newsAction = 'approve';
+    approveButton.dataset.newsId = String(news.id);
+
+    actions.append(editButton, deleteButton, approveButton);
+    li.append(text, actions);
     newsList.appendChild(li);
   });
 }
+
+newsList.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-news-action]');
+  if (!button) {
+    return;
+  }
+
+  const action = button.dataset.newsAction;
+  const newsId = Number(button.dataset.newsId);
+  if (!Number.isFinite(newsId)) {
+    return;
+  }
+
+  if (action === 'edit') {
+    openManualNewsInEditMode(newsId);
+    return;
+  }
+
+  if (action === 'delete') {
+    const index = manualNewsQueue.findIndex((item) => item.id === newsId);
+    if (index >= 0) {
+      manualNewsQueue.splice(index, 1);
+      if (editingManualNewsId === newsId) {
+        resetManualNewsFormToCreateMode();
+      }
+      renderNewsQueue();
+    }
+    return;
+  }
+
+  if (action === 'approve') {
+    approveManualNewsForVideo(newsId);
+  }
+});
 
 function buildEpisodeScript(mode = 'preview') {
   const episodeTitle = document.getElementById('episode-title').value.trim();
@@ -2028,4 +2206,5 @@ if (document.getElementById('rubrics').classList.contains('is-active') || !tubeL
 }
 
 setActiveMonitoringProvider(activeMonitoringProvider);
+resetManualNewsFormToCreateMode();
 renderNewsQueue();

@@ -162,6 +162,20 @@ button:hover {
   padding-left: 20px;
 }
 
+.news-queue-item {
+  margin-bottom: 10px;
+}
+
+.news-queue-text {
+  margin-bottom: 8px;
+}
+
+.news-queue-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .grid-2 {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
