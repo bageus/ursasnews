@@ -262,7 +262,57 @@
       </section>
 
       <section class="panel" id="rubrics">
-        <h2>Рубрики (заглушка MVP)</h2>
+        <h2>Рубрики</h2>
+        <div class="card movers-controls-card">
+          <h3>Фильтры топов (монеты/акции)</h3>
+          <div class="movers-controls-grid">
+            <label>
+              Валюта CoinGecko
+              <input id="movers-vs-currency" type="text" value="usd" placeholder="usd" />
+            </label>
+            <label>
+              FMP API key (акции)
+              <input id="movers-stock-api-key" type="text" placeholder="demo или ваш ключ" />
+            </label>
+            <label>
+              Min капитализация монет (USD)
+              <input id="movers-min-coin-cap" type="number" min="0" step="1000000" placeholder="100000000" />
+            </label>
+            <label>
+              Max капитализация монет (USD)
+              <input id="movers-max-coin-cap" type="number" min="0" step="1000000" placeholder="не ограничено" />
+            </label>
+            <label>
+              Min релевантность монет (объём/кап)
+              <input id="movers-min-coin-liquidity" type="number" min="0" max="10" step="0.01" value="0.01" />
+            </label>
+            <label>
+              Min капитализация акций (USD)
+              <input id="movers-min-stock-cap" type="number" min="0" step="1000000" placeholder="5000000000" />
+            </label>
+            <label>
+              Max капитализация акций (USD)
+              <input id="movers-max-stock-cap" type="number" min="0" step="1000000" placeholder="не ограничено" />
+            </label>
+            <label>
+              Min объём акций (shares)
+              <input id="movers-min-stock-volume" type="number" min="0" step="100000" placeholder="500000" />
+            </label>
+          </div>
+          <div class="row-actions">
+            <button type="button" id="movers-refresh" data-rubric-action>Обновить топы</button>
+            <button type="button" id="movers-save-settings" data-rubric-action>Сохранить фильтры</button>
+            <a
+              id="crypto-bubbles-link"
+              href="https://cryptobubbles.net/"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="button-link"
+              data-rubric-action
+            >Открыть Crypto Bubbles</a>
+          </div>
+          <p class="hint" id="movers-status">Данные ещё не загружались.</p>
+        </div>
         <div id="rubrics-grid" class="grid-2">
           <div class="card rubric-card" data-rubric-type="ursas_index" data-rubric-title="Ursas Index">
             <button type="button" class="rubric-edit-btn" data-rubric-edit title="Добавить описание">✏️</button>
@@ -276,10 +326,18 @@
             <p id="number-of-day">7</p>
             <p class="rubric-description" data-rubric-description></p>
           </div>
-          <div class="card rubric-card" data-rubric-type="top_10_faill" data-rubric-title="Top-10 падающих">
+          <div class="card rubric-card" data-rubric-type="top_10_coins" data-rubric-title="Top-10 монет (рост/падение)">
             <button type="button" class="rubric-edit-btn" data-rubric-edit title="Добавить описание">✏️</button>
-            <h3>Top-10 падающих</h3>
-            <p>Заглушка: данные будут подставляться позже.</p>
+            <h3>Top-10 монет: рост и падение (24h)</h3>
+            <div id="coin-movers-grid" class="movers-grid"></div>
+            <p class="hint" id="coin-movers-status">Загрузка ещё не запускалась.</p>
+            <p class="rubric-description" data-rubric-description></p>
+          </div>
+          <div class="card rubric-card" data-rubric-type="top_10_stocks" data-rubric-title="Top-10 акций (рост/падение)">
+            <button type="button" class="rubric-edit-btn" data-rubric-edit title="Добавить описание">✏️</button>
+            <h3>Top-10 акций: рост и падение (день)</h3>
+            <div id="stock-movers-grid" class="movers-grid"></div>
+            <p class="hint" id="stock-movers-status">Загрузка ещё не запускалась.</p>
             <p class="rubric-description" data-rubric-description></p>
           </div>
           <div class="card rubric-card" data-rubric-type="bear_world_news" data-rubric-title="Bear-world fallback">

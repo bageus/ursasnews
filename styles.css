@@ -142,6 +142,21 @@ button:hover {
   border-color: var(--accent);
 }
 
+.button-link {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 8px 12px;
+  text-decoration: none;
+}
+
+.button-link:hover {
+  border-color: var(--accent);
+}
+
 .list {
   margin: 0;
   padding-left: 20px;
@@ -779,6 +794,46 @@ button:hover {
 .rubric-view-frame p {
   margin: 0;
   white-space: pre-wrap;
+}
+
+.movers-controls-card h3 {
+  margin-top: 0;
+}
+
+.movers-controls-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  margin-bottom: 10px;
+}
+
+.movers-grid {
+  display: grid;
+  gap: 10px;
+  margin: 10px 0;
+}
+
+.movers-group h4 {
+  margin: 0 0 8px;
+}
+
+.movers-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+}
+
+.movers-list li {
+  color: #d9e4ff;
+}
+
+.movers-list .up {
+  color: #6de28d;
+}
+
+.movers-list .down {
+  color: #ff8f9c;
 }
 
 .row-actions {

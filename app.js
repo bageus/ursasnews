@@ -16,6 +16,7 @@ function activateTab(tabId) {
 
   if (tabId === 'rubrics') {
     loadTubeLeaderboard();
+    loadMarketMovers();
   }
 }
 
@@ -77,6 +78,22 @@ const commandsClose = document.getElementById('commands-close');
 const commandsList = document.getElementById('commands-list');
 const helpButtons = document.querySelectorAll('[data-help="commands"]');
 const rubricsGrid = document.getElementById('rubrics-grid');
+const moversVsCurrencyInput = document.getElementById('movers-vs-currency');
+const moversStockApiKeyInput = document.getElementById('movers-stock-api-key');
+const moversMinCoinCapInput = document.getElementById('movers-min-coin-cap');
+const moversMaxCoinCapInput = document.getElementById('movers-max-coin-cap');
+const moversMinCoinLiquidityInput = document.getElementById('movers-min-coin-liquidity');
+const moversMinStockCapInput = document.getElementById('movers-min-stock-cap');
+const moversMaxStockCapInput = document.getElementById('movers-max-stock-cap');
+const moversMinStockVolumeInput = document.getElementById('movers-min-stock-volume');
+const moversRefreshButton = document.getElementById('movers-refresh');
+const moversSaveSettingsButton = document.getElementById('movers-save-settings');
+const moversStatus = document.getElementById('movers-status');
+const coinMoversGrid = document.getElementById('coin-movers-grid');
+const coinMoversStatus = document.getElementById('coin-movers-status');
+const stockMoversGrid = document.getElementById('stock-movers-grid');
+const stockMoversStatus = document.getElementById('stock-movers-status');
+const cryptoBubblesLink = document.getElementById('crypto-bubbles-link');
 const rubricEditorOverlay = document.getElementById('rubric-editor-overlay');
 const rubricEditorTitle = document.getElementById('rubric-editor-title');
 const rubricEditorText = document.getElementById('rubric-editor-text');
@@ -95,6 +112,7 @@ let tubeLeaderboardLoaded = false;
 let activeRubricType = '';
 const subtitlePosition = { x: 0, y: 0 };
 const RUBRIC_DESCRIPTIONS_KEY = 'ursasnews_rubric_descriptions_v1';
+const MARKET_MOVERS_FILTERS_KEY = 'ursasnews_market_movers_filters_v1';
 let rubricDescriptions = {};
 const monitoringProviders = [
   { id: 'x', title: 'X', mode: 'account', hint: 'Добавьте @аккаунт или ссылку на профиль.' },
@@ -149,6 +167,8 @@ const defaultNewsSceneSettings = {
 };
 
 const TUBE_BACKEND_URL = 'https://api.ursasstube.fun';
+const COINGECKO_API_URL = 'https://api.coingecko.com/api/v3';
+const FMP_API_URL = 'https://financialmodelingprep.com/api/v3';
 
 const commandHelpItems = [
   ['*speak_pause 100', 'Пауза в речи на 100 мс.'],
@@ -202,7 +222,8 @@ function renderCommandsHelp() {
 const rubricCatalog = [
   { type: 'ursas_index', title: 'Ursas Index' },
   { type: 'number_of_day', title: 'Number of the day' },
-  { type: 'top_10_faill', title: 'Top 10 faill' },
+  { type: 'top_10_coins', title: 'Top 10 coins movers' },
+  { type: 'top_10_stocks', title: 'Top 10 stocks movers' },
   { type: 'bear_world_news', title: 'Bear-world news' },
   { type: 'bear_language', title: 'Язык медведей' },
   { type: 'roadmap_news', title: 'Roadmap news' },
@@ -1152,6 +1173,213 @@ async function loadTubeLeaderboard() {
   }
 }
 
+function toNumberOrNull(value) {
+  if (value === '' || value === null || value === undefined) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function formatCompactUsd(value) {
+  if (!Number.isFinite(value)) return '—';
+  return new Intl.NumberFormat('ru-RU', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+    notation: 'compact',
+  }).format(value);
+}
+
+function formatPercent(value) {
+  if (!Number.isFinite(value)) return '—';
+  return `${value > 0 ? '+' : ''}${value.toFixed(2)}%`;
+}
+
+function getMoversFilters() {
+  return {
+    vsCurrency: (moversVsCurrencyInput?.value || 'usd').trim().toLowerCase() || 'usd',
+    stockApiKey: (moversStockApiKeyInput?.value || 'demo').trim() || 'demo',
+    minCoinCap: toNumberOrNull(moversMinCoinCapInput?.value),
+    maxCoinCap: toNumberOrNull(moversMaxCoinCapInput?.value),
+    minCoinLiquidity: Math.max(0, toNumberOrNull(moversMinCoinLiquidityInput?.value) ?? 0),
+    minStockCap: toNumberOrNull(moversMinStockCapInput?.value),
+    maxStockCap: toNumberOrNull(moversMaxStockCapInput?.value),
+    minStockVolume: Math.max(0, toNumberOrNull(moversMinStockVolumeInput?.value) ?? 0),
+  };
+}
+
+function applyMoversFilters(filters = {}) {
+  if (!moversVsCurrencyInput) return;
+  moversVsCurrencyInput.value = filters.vsCurrency || 'usd';
+  moversStockApiKeyInput.value = filters.stockApiKey || '';
+  moversMinCoinCapInput.value = Number.isFinite(filters.minCoinCap) ? filters.minCoinCap : '';
+  moversMaxCoinCapInput.value = Number.isFinite(filters.maxCoinCap) ? filters.maxCoinCap : '';
+  moversMinCoinLiquidityInput.value = Number.isFinite(filters.minCoinLiquidity) ? filters.minCoinLiquidity : 0.01;
+  moversMinStockCapInput.value = Number.isFinite(filters.minStockCap) ? filters.minStockCap : '';
+  moversMaxStockCapInput.value = Number.isFinite(filters.maxStockCap) ? filters.maxStockCap : '';
+  moversMinStockVolumeInput.value = Number.isFinite(filters.minStockVolume) ? filters.minStockVolume : '';
+}
+
+function saveMoversFilters() {
+  const filters = getMoversFilters();
+  localStorage.setItem(MARKET_MOVERS_FILTERS_KEY, JSON.stringify(filters));
+  moversStatus.textContent = 'Фильтры сохранены в localStorage.';
+  const bubblesCurrency = (filters.vsCurrency || 'usd').toUpperCase();
+  if (cryptoBubblesLink) {
+    cryptoBubblesLink.href = `https://cryptobubbles.net/?theme=dark&currency=${encodeURIComponent(bubblesCurrency)}&size=marketcap`;
+  }
+}
+
+function loadMoversFilters() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(MARKET_MOVERS_FILTERS_KEY) || '{}') || {};
+    applyMoversFilters(raw);
+  } catch {
+    applyMoversFilters();
+  }
+  saveMoversFilters();
+}
+
+function renderMoversList(root, title, items, type) {
+  const group = document.createElement('div');
+  group.className = 'movers-group';
+  const heading = document.createElement('h4');
+  heading.textContent = title;
+  const list = document.createElement('ol');
+  list.className = 'movers-list';
+
+  items.forEach((item) => {
+    const li = document.createElement('li');
+    const moveClass = item.change >= 0 ? 'up' : 'down';
+    li.innerHTML = `<strong>${item.symbol}</strong> ${item.name ? `(${item.name})` : ''} — <span class="${moveClass}">${formatPercent(item.change)}</span> · cap ${formatCompactUsd(item.marketCap)}`;
+    if (type === 'stock' && Number.isFinite(item.volume)) {
+      li.innerHTML += ` · vol ${new Intl.NumberFormat('ru-RU').format(item.volume)}`;
+    }
+    list.appendChild(li);
+  });
+
+  group.append(heading, list);
+  root.appendChild(group);
+}
+
+function parseFmpChangePercent(rawValue) {
+  if (typeof rawValue === 'number') return rawValue;
+  if (typeof rawValue !== 'string') return NaN;
+  return Number(rawValue.replace(/[()%+\s]/g, ''));
+}
+
+async function fetchCoinMovers(filters) {
+  const url = new URL(`${COINGECKO_API_URL}/coins/markets`);
+  url.searchParams.set('vs_currency', filters.vsCurrency || 'usd');
+  url.searchParams.set('order', 'market_cap_desc');
+  url.searchParams.set('per_page', '250');
+  url.searchParams.set('page', '1');
+  url.searchParams.set('sparkline', 'false');
+  url.searchParams.set('price_change_percentage', '24h');
+  const response = await fetch(url.toString(), { headers: { Accept: 'application/json' } });
+  if (!response.ok) throw new Error(`CoinGecko HTTP ${response.status}`);
+  const data = await response.json();
+  const filtered = (Array.isArray(data) ? data : []).filter((coin) => {
+    const cap = Number(coin.market_cap || 0);
+    const volume = Number(coin.total_volume || 0);
+    const liquidity = cap > 0 ? volume / cap : 0;
+    if (Number.isFinite(filters.minCoinCap) && cap < filters.minCoinCap) return false;
+    if (Number.isFinite(filters.maxCoinCap) && cap > filters.maxCoinCap) return false;
+    if (Number.isFinite(filters.minCoinLiquidity) && liquidity < filters.minCoinLiquidity) return false;
+    return Number.isFinite(Number(coin.price_change_percentage_24h));
+  });
+
+  const mapped = filtered.map((coin) => ({
+    symbol: String(coin.symbol || '').toUpperCase(),
+    name: coin.name || '',
+    change: Number(coin.price_change_percentage_24h || 0),
+    marketCap: Number(coin.market_cap || 0),
+  }));
+
+  return {
+    gainers: [...mapped].sort((a, b) => b.change - a.change).slice(0, 10),
+    losers: [...mapped].sort((a, b) => a.change - b.change).slice(0, 10),
+  };
+}
+
+async function fetchStockMovers(filters) {
+  const apiKey = filters.stockApiKey || 'demo';
+  const [gainersResp, losersResp] = await Promise.all([
+    fetch(`${FMP_API_URL}/stock_market/gainers?apikey=${encodeURIComponent(apiKey)}`),
+    fetch(`${FMP_API_URL}/stock_market/losers?apikey=${encodeURIComponent(apiKey)}`),
+  ]);
+  if (!gainersResp.ok || !losersResp.ok) {
+    throw new Error(`FMP HTTP ${gainersResp.status}/${losersResp.status}`);
+  }
+  const gainersRaw = await gainersResp.json();
+  const losersRaw = await losersResp.json();
+
+  const baseList = [...(Array.isArray(gainersRaw) ? gainersRaw : []), ...(Array.isArray(losersRaw) ? losersRaw : [])];
+  const uniqueSymbols = [...new Set(baseList.map((item) => item.symbol).filter(Boolean))].slice(0, 80);
+  let quoteBySymbol = {};
+  if (uniqueSymbols.length > 0) {
+    const quoteResp = await fetch(`${FMP_API_URL}/quote/${uniqueSymbols.join(',')}?apikey=${encodeURIComponent(apiKey)}`);
+    if (quoteResp.ok) {
+      const quotes = await quoteResp.json();
+      quoteBySymbol = Object.fromEntries((Array.isArray(quotes) ? quotes : []).map((quote) => [quote.symbol, quote]));
+    }
+  }
+
+  const normalize = (entry) => {
+    const quote = quoteBySymbol[entry.symbol] || {};
+    return {
+      symbol: entry.symbol,
+      name: entry.name || quote.name || '',
+      change: parseFmpChangePercent(entry.changesPercentage),
+      marketCap: Number(quote.marketCap || entry.marketCap || 0),
+      volume: Number(quote.volume || entry.volume || 0),
+    };
+  };
+
+  const filtered = baseList
+    .map(normalize)
+    .filter((item) => Number.isFinite(item.change))
+    .filter((item) => {
+      if (Number.isFinite(filters.minStockCap) && item.marketCap < filters.minStockCap) return false;
+      if (Number.isFinite(filters.maxStockCap) && item.marketCap > filters.maxStockCap) return false;
+      if (Number.isFinite(filters.minStockVolume) && item.volume < filters.minStockVolume) return false;
+      return true;
+    });
+
+  return {
+    gainers: filtered.filter((item) => item.change >= 0).sort((a, b) => b.change - a.change).slice(0, 10),
+    losers: filtered.filter((item) => item.change < 0).sort((a, b) => a.change - b.change).slice(0, 10),
+  };
+}
+
+async function loadMarketMovers() {
+  if (!coinMoversGrid || !stockMoversGrid) return;
+  const filters = getMoversFilters();
+  moversStatus.textContent = 'Загружаю топы монет и акций...';
+  coinMoversStatus.textContent = 'Загрузка монет...';
+  stockMoversStatus.textContent = 'Загрузка акций...';
+  coinMoversGrid.innerHTML = '';
+  stockMoversGrid.innerHTML = '';
+
+  const [coinsResult, stocksResult] = await Promise.allSettled([fetchCoinMovers(filters), fetchStockMovers(filters)]);
+  if (coinsResult.status === 'fulfilled') {
+    renderMoversList(coinMoversGrid, '🚀 Топ-10 растущих монет', coinsResult.value.gainers, 'coin');
+    renderMoversList(coinMoversGrid, '🔻 Топ-10 падающих монет', coinsResult.value.losers, 'coin');
+    coinMoversStatus.textContent = `Монеты обновлены (${new Date().toLocaleTimeString('ru-RU')}).`;
+  } else {
+    coinMoversStatus.textContent = `Ошибка монет: ${coinsResult.reason?.message || coinsResult.reason}`;
+  }
+
+  if (stocksResult.status === 'fulfilled') {
+    renderMoversList(stockMoversGrid, '📈 Топ-10 растущих акций', stocksResult.value.gainers, 'stock');
+    renderMoversList(stockMoversGrid, '📉 Топ-10 падающих акций', stocksResult.value.losers, 'stock');
+    stockMoversStatus.textContent = `Акции обновлены (${new Date().toLocaleTimeString('ru-RU')}).`;
+  } else {
+    stockMoversStatus.textContent = `Ошибка акций: ${stocksResult.reason?.message || stocksResult.reason}`;
+  }
+
+  moversStatus.textContent = 'Обновление завершено. Если акции не загрузились — проверьте FMP API key.';
+}
+
 function getSelectedRubrics() {
   const links = selectedRubrics.querySelectorAll('a[data-rubric-type]');
   return Array.from(links).map((link) => ({
@@ -1751,6 +1979,11 @@ subtitleJoystick.addEventListener('click', (event) => {
   applySubtitlePosition();
 });
 tubeLeaderboardReload.addEventListener('click', loadTubeLeaderboard);
+moversSaveSettingsButton?.addEventListener('click', () => {
+  saveMoversFilters();
+  loadMarketMovers();
+});
+moversRefreshButton?.addEventListener('click', loadMarketMovers);
 rubricEditorSave.addEventListener('click', saveActiveRubricDescription);
 rubricEditorClose.addEventListener('click', closeRubricEditor);
 rubricEditorOverlay.addEventListener('click', (event) => {
@@ -1761,6 +1994,9 @@ rubricViewOverlay.addEventListener('click', (event) => {
   if (event.target === rubricViewOverlay) closeRubricView();
 });
 rubricsGrid.addEventListener('click', (event) => {
+  if (event.target.closest('[data-rubric-action]')) {
+    return;
+  }
   const editButton = event.target.closest('[data-rubric-edit]');
   if (editButton) {
     event.preventDefault();
@@ -1778,6 +2014,7 @@ updateSpeechMode();
 applySceneLayout(episodeFormatInput.value);
 addSpeechNewsItem();
 fillRubricSelect();
+loadMoversFilters();
 loadRubricDescriptions();
 renderRubricDescriptions();
 addRubricButton.disabled = true;
@@ -1787,6 +2024,7 @@ applySceneSettingsToMainStage(defaultNewsSceneSettings);
 showBaseSubtitlePreview();
 if (document.getElementById('rubrics').classList.contains('is-active') || !tubeLeaderboardLoaded) {
   loadTubeLeaderboard();
+  loadMarketMovers();
 }
 
 setActiveMonitoringProvider(activeMonitoringProvider);
