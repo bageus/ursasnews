@@ -92,8 +92,10 @@ const moversMinStockVolumeInput = document.getElementById('movers-min-stock-volu
 const moversRefreshButton = document.getElementById('movers-refresh');
 const moversSaveSettingsButton = document.getElementById('movers-save-settings');
 const moversStatus = document.getElementById('movers-status');
-const coinMoversGrid = document.getElementById('coin-movers-grid');
-const coinMoversStatus = document.getElementById('coin-movers-status');
+const coinGainersGrid = document.getElementById('coin-gainers-grid');
+const coinGainersStatus = document.getElementById('coin-gainers-status');
+const coinLosersGrid = document.getElementById('coin-losers-grid');
+const coinLosersStatus = document.getElementById('coin-losers-status');
 const stockMoversGrid = document.getElementById('stock-movers-grid');
 const stockMoversStatus = document.getElementById('stock-movers-status');
 const cryptoBubblesLink = document.getElementById('crypto-bubbles-link');
@@ -226,7 +228,8 @@ function renderCommandsHelp() {
 const rubricCatalog = [
   { type: 'ursas_index', title: 'Ursas Index' },
   { type: 'number_of_day', title: 'Number of the day' },
-  { type: 'top_10_coins', title: 'Top 10 coins movers' },
+  { type: 'top_10_coins_gainers', title: 'Top 10 coins gainers' },
+  { type: 'top_10_coins_losers', title: 'Top 10 coins losers' },
   { type: 'top_10_stocks', title: 'Top 10 stocks movers' },
   { type: 'bear_world_news', title: 'Bear-world news' },
   { type: 'bear_language', title: 'Язык медведей' },
@@ -1357,21 +1360,27 @@ async function fetchStockMovers(filters) {
 }
 
 async function loadMarketMovers() {
-  if (!coinMoversGrid || !stockMoversGrid) return;
+  if (!coinGainersGrid || !coinLosersGrid || !stockMoversGrid) return;
   const filters = getMoversFilters();
   moversStatus.textContent = 'Загружаю топы монет и акций...';
-  coinMoversStatus.textContent = 'Загрузка монет...';
+  coinGainersStatus.textContent = 'Загрузка монет роста...';
+  coinLosersStatus.textContent = 'Загрузка монет падения...';
   stockMoversStatus.textContent = 'Загрузка акций...';
-  coinMoversGrid.innerHTML = '';
+  coinGainersGrid.innerHTML = '';
+  coinLosersGrid.innerHTML = '';
   stockMoversGrid.innerHTML = '';
 
   const [coinsResult, stocksResult] = await Promise.allSettled([fetchCoinMovers(filters), fetchStockMovers(filters)]);
   if (coinsResult.status === 'fulfilled') {
-    renderMoversList(coinMoversGrid, '🚀 Топ-10 растущих монет', coinsResult.value.gainers, 'coin');
-    renderMoversList(coinMoversGrid, '🔻 Топ-10 падающих монет', coinsResult.value.losers, 'coin');
-    coinMoversStatus.textContent = `Монеты обновлены (${new Date().toLocaleTimeString('ru-RU')}).`;
+    renderMoversList(coinGainersGrid, '🚀 Топ-10 растущих монет', coinsResult.value.gainers, 'coin');
+    renderMoversList(coinLosersGrid, '🔻 Топ-10 падающих монет', coinsResult.value.losers, 'coin');
+    const updatedAt = new Date().toLocaleTimeString('ru-RU');
+    coinGainersStatus.textContent = `Монеты роста обновлены (${updatedAt}).`;
+    coinLosersStatus.textContent = `Монеты падения обновлены (${updatedAt}).`;
   } else {
-    coinMoversStatus.textContent = `Ошибка монет: ${coinsResult.reason?.message || coinsResult.reason}`;
+    const errorMessage = `Ошибка монет: ${coinsResult.reason?.message || coinsResult.reason}`;
+    coinGainersStatus.textContent = errorMessage;
+    coinLosersStatus.textContent = errorMessage;
   }
 
   if (stocksResult.status === 'fulfilled') {
