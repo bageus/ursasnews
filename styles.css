@@ -761,13 +761,18 @@ button:hover {
 
 .rubric-card {
   position: relative;
-  cursor: pointer;
 }
 
-.rubric-edit-btn {
+.rubric-card-actions {
   position: absolute;
   top: 10px;
   right: 10px;
+  display: flex;
+  gap: 6px;
+}
+
+.rubric-edit-btn,
+.rubric-open-btn {
   width: 32px;
   height: 32px;
   padding: 0;
@@ -800,9 +805,15 @@ button:hover {
 .flip-digit {
   --flip-duration: 220ms;
   position: relative;
-  width: 74px;
-  height: 92px;
+  width: 118px;
+  height: 146px;
   perspective: 500px;
+  border-radius: 22px;
+  background: linear-gradient(145deg, #233246 0%, #101a28 100%);
+  box-shadow:
+    inset 0 0 0 3px #000f1d,
+    inset 0 0 0 10px rgba(130, 170, 210, 0.08),
+    0 8px 18px rgba(0, 0, 0, 0.35);
 }
 
 .flip-static,
@@ -827,31 +838,58 @@ button:hover {
 .flip-static svg,
 .flip-flap svg {
   width: 100%;
-  height: 92px;
+  height: 146px;
   display: block;
 }
 
 .flip-static.bottom svg,
 .flip-flap.bottom svg {
-  transform: translateY(-46px);
+  transform: translateY(-73px);
 }
 
 .flip-clock rect {
-  fill: #111935;
-  stroke: #2f3863;
-  stroke-width: 2;
+  fill: transparent;
+  stroke: transparent;
 }
 
 .flip-clock text {
-  font-size: 52px;
+  font-size: 104px;
   font-weight: 800;
-  fill: #eef2ff;
+  fill: #8fdcf5;
   font-family: Inter, system-ui, sans-serif;
 }
 
 .flip-flap {
   backface-visibility: hidden;
   z-index: 3;
+}
+
+.flip-digit::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 3px;
+  transform: translateY(-50%);
+  background: #05101a;
+  z-index: 4;
+}
+
+.flip-digit::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 8px;
+  right: 8px;
+  height: 34px;
+  transform: translateY(-50%);
+  border-radius: 12px;
+  border-left: 8px solid #586678;
+  border-right: 8px solid #586678;
+  opacity: 0.9;
+  pointer-events: none;
+  z-index: 5;
 }
 
 .flip-flap.top {
@@ -893,22 +931,35 @@ button:hover {
 }
 
 .rubric-view-modal {
-  width: min(460px, 100%);
+  width: min(760px, 100%);
+  background: transparent;
+  border: 0;
+  padding: 0;
 }
 
 .rubric-view-frame {
-  aspect-ratio: 9 / 16;
-  width: 100%;
-  border-radius: 12px;
-  border: 1px solid var(--border);
+  width: min(720px, 92vw);
+  max-height: 84vh;
+  border-radius: 16px;
+  border: 1px solid #2f3863;
   background: #0f1530;
-  padding: 16px;
+  padding: 20px;
   overflow: auto;
 }
 
-.rubric-view-frame p {
-  margin: 0;
-  white-space: pre-wrap;
+.rubric-view-frame h3 {
+  margin-top: 0;
+}
+
+.rubric-view-frame .rubric-card-actions,
+.rubric-view-frame .rubric-description,
+.rubric-view-frame button,
+.rubric-view-frame .row-actions {
+  display: none;
+}
+
+.rubric-card-preview {
+  position: relative;
 }
 
 .movers-controls-card h3 {

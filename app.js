@@ -109,9 +109,7 @@ const rubricEditorText = document.getElementById('rubric-editor-text');
 const rubricEditorSave = document.getElementById('rubric-editor-save');
 const rubricEditorClose = document.getElementById('rubric-editor-close');
 const rubricViewOverlay = document.getElementById('rubric-view-overlay');
-const rubricViewTitle = document.getElementById('rubric-view-title');
 const rubricViewContent = document.getElementById('rubric-view-content');
-const rubricViewClose = document.getElementById('rubric-view-close');
 const numberOfDayFlip = document.getElementById('number-of-day-flip');
 const numberOfDaySpinButton = document.getElementById('spin-number-of-day');
 const numberOfDayStatus = document.getElementById('number-of-day-status');
@@ -1581,15 +1579,17 @@ function saveActiveRubricDescription() {
 }
 
 function openRubricView(card) {
-  const type = card?.dataset.rubricType;
-  if (!type) return;
-  const title = card.dataset.rubricTitle || 'Рубрика';
-  rubricViewTitle.textContent = title;
-  rubricViewContent.textContent = rubricDescriptions[type] || 'Описание не задано';
+  if (!card || !rubricViewContent) return;
+  const viewCard = card.cloneNode(true);
+  viewCard.classList.remove('card');
+  viewCard.classList.add('rubric-card-preview');
+  rubricViewContent.innerHTML = '';
+  rubricViewContent.appendChild(viewCard);
   rubricViewOverlay.classList.add('is-open');
 }
 
 function closeRubricView() {
+  rubricViewContent.innerHTML = '';
   rubricViewOverlay.classList.remove('is-open');
 }
 
@@ -2333,7 +2333,6 @@ rubricEditorClose.addEventListener('click', closeRubricEditor);
 rubricEditorOverlay.addEventListener('click', (event) => {
   if (event.target === rubricEditorOverlay) closeRubricEditor();
 });
-rubricViewClose.addEventListener('click', closeRubricView);
 rubricViewOverlay.addEventListener('click', (event) => {
   if (event.target === rubricViewOverlay) closeRubricView();
 });
@@ -2348,9 +2347,17 @@ rubricsGrid.addEventListener('click', (event) => {
     openRubricEditor(editButton.closest('.rubric-card'));
     return;
   }
-  const card = event.target.closest('.rubric-card');
-  if (!card) return;
-  openRubricView(card);
+  const openButton = event.target.closest('[data-rubric-open]');
+  if (openButton) {
+    event.preventDefault();
+    event.stopPropagation();
+    openRubricView(openButton.closest('.rubric-card'));
+  }
+});
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && rubricViewOverlay.classList.contains('is-open')) {
+    closeRubricView();
+  }
 });
 
 setNeutralMouth();
