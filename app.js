@@ -33,6 +33,11 @@ if (window.location.hash) {
 
 const manualNewsForm = document.getElementById('manual-news-form');
 const newsList = document.getElementById('news-list');
+const monitorProviderTabs = document.getElementById('monitor-provider-tabs');
+const monitorTargetForm = document.getElementById('monitor-target-form');
+const monitorTargetLabel = document.getElementById('monitor-target-label');
+const monitorTargetInput = document.getElementById('monitor-target-input');
+const monitorTargetList = document.getElementById('monitor-target-list');
 const scriptOutput = document.getElementById('script-output');
 const mouthLayer = document.getElementById('mouth-layer');
 const speechModeInput = document.getElementById('speech-mode');
@@ -91,6 +96,19 @@ let activeRubricType = '';
 const subtitlePosition = { x: 0, y: 0 };
 const RUBRIC_DESCRIPTIONS_KEY = 'ursasnews_rubric_descriptions_v1';
 let rubricDescriptions = {};
+const monitoringProviders = [
+  { id: 'x', title: 'X', mode: 'account', hint: 'Добавьте @аккаунт или ссылку на профиль.' },
+  { id: 'reddit', title: 'Reddit', mode: 'account', hint: 'Добавьте сабреддит или профиль, например r/cryptocurrency.' },
+  { id: 'telegram', title: 'Telegram', mode: 'account', hint: 'Добавьте @канал или invite-ссылку.' },
+  { id: 'instagram', title: 'Instagram', mode: 'account', hint: 'Добавьте @аккаунт источника.' },
+  { id: 'reuters', title: 'Reuters', mode: 'account', hint: 'Добавьте профиль, ленту или раздел редакции.' },
+  { id: 'bloomberg', title: 'Bloomberg', mode: 'account', hint: 'Добавьте автора, раздел или профиль.' },
+  { id: 'coindesk', title: 'CoinDesk', mode: 'account', hint: 'Добавьте рубрику или страницу автора.' },
+  { id: 'grok', title: 'Grok', mode: 'prompt', hint: 'Введите промпт для поиска новостей через Grok.' },
+  { id: 'gemini', title: 'Gemini', mode: 'prompt', hint: 'Введите промпт для поиска новостей через Gemini.' },
+];
+const monitoringTargets = {};
+let activeMonitoringProvider = monitoringProviders[0].id;
 const BOARD_NEWS_IMAGE_RECT = { x: 164, y: 276, width: 696, height: 937 };
 const boardSlotConfig = {
   '1080x1920': {
@@ -1491,12 +1509,57 @@ function updateSpeechMode() {
   wpmField.classList.toggle('is-hidden', durationMode);
 }
 
+function getProviderConfig(providerId) {
+  return monitoringProviders.find((provider) => provider.id === providerId) || monitoringProviders[0];
+}
+
+function renderMonitoringProviderTabs() {
+  monitorProviderTabs.innerHTML = '';
+  monitoringProviders.forEach((provider) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `provider-tab${provider.id === activeMonitoringProvider ? ' is-active' : ''}`;
+    button.dataset.provider = provider.id;
+    button.textContent = provider.title;
+    monitorProviderTabs.appendChild(button);
+  });
+}
+
+function renderMonitoringTargets() {
+  const provider = getProviderConfig(activeMonitoringProvider);
+  const targets = monitoringTargets[provider.id] || [];
+  monitorTargetList.innerHTML = '';
+
+  if (targets.length === 0) {
+    const empty = document.createElement('li');
+    empty.textContent = provider.mode === 'prompt' ? 'Пока нет промптов для поиска.' : 'Пока нет аккаунтов для отслеживания.';
+    monitorTargetList.appendChild(empty);
+    return;
+  }
+
+  targets.forEach((target, index) => {
+    const row = document.createElement('li');
+    row.textContent = `${index + 1}. ${target}`;
+    monitorTargetList.appendChild(row);
+  });
+}
+
+function setActiveMonitoringProvider(providerId) {
+  const provider = getProviderConfig(providerId);
+  activeMonitoringProvider = provider.id;
+  monitorTargetLabel.textContent = provider.mode === 'prompt' ? 'Промпт для поиска' : 'Аккаунт для отслеживания';
+  monitorTargetInput.placeholder = provider.hint;
+  renderMonitoringProviderTabs();
+  renderMonitoringTargets();
+}
+
 manualNewsForm.addEventListener('submit', (event) => {
   event.preventDefault();
 
   const item = {
     id: Date.now(),
     title: document.getElementById('news-title').value.trim(),
+    link: document.getElementById('news-link').value.trim(),
     summary: document.getElementById('news-summary').value.trim(),
     source: document.getElementById('news-source').value.trim() || 'manual',
     tag: document.getElementById('news-tag').value,
@@ -1524,7 +1587,8 @@ function renderNewsQueue() {
 
   manualNewsQueue.forEach((news, index) => {
     const li = document.createElement('li');
-    li.textContent = `${index + 1}. [${news.tag}] ${news.title} — ${news.summary}`;
+    const linkSuffix = news.link ? ` (ссылка: ${news.link})` : '';
+    li.textContent = `${index + 1}. [${news.tag}] ${news.title}${linkSuffix} — ${news.summary}`;
     newsList.appendChild(li);
   });
 }
@@ -1599,6 +1663,7 @@ function buildEpisodeScript(mode = 'preview') {
       order: idx + 1,
       type: 'news',
       board_title: news.title,
+      source_url: news.link || '',
       narration_text: news.summary,
       source: news.source,
       tag: news.tag,
@@ -1620,6 +1685,32 @@ document.getElementById('preview-render').addEventListener('click', () => {
 
 document.getElementById('final-render').addEventListener('click', () => {
   buildEpisodeScript('final');
+});
+
+monitorProviderTabs.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-provider]');
+  if (!button) {
+    return;
+  }
+
+  setActiveMonitoringProvider(button.dataset.provider);
+});
+
+monitorTargetForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+
+  const value = monitorTargetInput.value.trim();
+  if (!value) {
+    return;
+  }
+
+  if (!monitoringTargets[activeMonitoringProvider]) {
+    monitoringTargets[activeMonitoringProvider] = [];
+  }
+
+  monitoringTargets[activeMonitoringProvider].push(value);
+  monitorTargetForm.reset();
+  renderMonitoringTargets();
 });
 
 mouthPreviewButton.addEventListener('click', startMouthPreview);
@@ -1698,4 +1789,5 @@ if (document.getElementById('rubrics').classList.contains('is-active') || !tubeL
   loadTubeLeaderboard();
 }
 
+setActiveMonitoringProvider(activeMonitoringProvider);
 renderNewsQueue();
