@@ -443,6 +443,39 @@
             <p class="hint" id="stock-movers-status">Загрузка ещё не запускалась.</p>
             <p class="rubric-description" data-rubric-description></p>
           </div>
+          <div class="card rubric-card" data-rubric-type="crypto_bubbles" data-rubric-title="Crypto Bubbles">
+            <button type="button" class="rubric-edit-btn" data-rubric-edit title="Добавить описание">✏️</button>
+            <h3>Crypto Bubbles (24h, USD)</h3>
+            <p class="hint">
+              Period: day · Bubble size: Market cap · Bubble content: Market cap · Bubble color: performance.
+            </p>
+            <div class="crypto-bubbles-grid">
+              <article class="crypto-bubbles-window">
+                <h4>Performance (цвет по динамике, 24h)</h4>
+                <iframe
+                  id="crypto-bubbles-performance-frame"
+                  class="crypto-bubbles-frame"
+                  title="Crypto Bubbles Performance view"
+                  loading="lazy"
+                  referrerpolicy="no-referrer"
+                ></iframe>
+              </article>
+              <article class="crypto-bubbles-window">
+                <h4>Market Cap (absolute)</h4>
+                <iframe
+                  id="crypto-bubbles-marketcap-frame"
+                  class="crypto-bubbles-frame"
+                  title="Crypto Bubbles Market Cap absolute view"
+                  loading="lazy"
+                  referrerpolicy="no-referrer"
+                ></iframe>
+              </article>
+            </div>
+            <p id="crypto-bubbles-status" class="hint">
+              Если виджеты не загружаются внутри страницы, используйте кнопку «Открыть Crypto Bubbles».
+            </p>
+            <p class="rubric-description" data-rubric-description></p>
+          </div>
           <div class="card rubric-card" data-rubric-type="bear_world_news" data-rubric-title="Bear-world fallback">
             <div class="rubric-card-actions">
               <button type="button" class="rubric-open-btn" data-rubric-open title="Открыть оверлей">👁️</button>
