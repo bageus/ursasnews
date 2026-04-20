@@ -1,37 +1,3 @@
-const tabs = Array.from(document.querySelectorAll('.tab'));
-const panels = Array.from(document.querySelectorAll('.panel'));
-
-function activateTab(tabId) {
-  const tab = tabs.find((candidate) => candidate.dataset.tab === tabId);
-  const nextPanel = panels.find((panel) => panel.id === tabId);
-  if (!tab || !nextPanel) {
-    return;
-  }
-
-  tabs.forEach((item) => item.classList.remove('is-active'));
-  panels.forEach((panel) => panel.classList.remove('is-active'));
-
-  tab.classList.add('is-active');
-  nextPanel.classList.add('is-active');
-
-  if (tabId === 'rubrics') {
-    loadTubeLeaderboard();
-    marketMoversController?.load();
-  }
-}
-
-tabs.forEach((tab) => {
-  tab.addEventListener('click', (event) => {
-    event.preventDefault();
-    activateTab(tab.dataset.tab);
-  });
-});
-
-if (window.location.hash) {
-  const hashTabId = window.location.hash.replace('#', '');
-  activateTab(hashTabId);
-}
-
 const manualNewsForm = document.getElementById('manual-news-form');
 const newsList = document.getElementById('news-list');
 const manualNewsSubmitButton = manualNewsForm?.querySelector('button[type="submit"]');
@@ -2010,6 +1976,9 @@ marketMoversController = window.UrsasMarketMovers?.createController({
     coingeckoBaseUrl: COINGECKO_API_URL,
     fmpBaseUrl: FMP_API_URL,
   },
+  options: {
+    enableCryptoBubblesEmbed: false,
+  },
 });
 marketMoversController?.bindFrameStatusEvents();
 
@@ -2094,6 +2063,12 @@ updateSpeechMode();
 applySceneLayout(episodeFormatInput.value);
 addSpeechNewsItem();
 fillRubricSelect();
+window.UrsasTabs?.createTabNavigator({
+  onRubricsTabActivated: () => {
+    loadTubeLeaderboard();
+    marketMoversController?.load();
+  },
+});
 marketMoversController?.loadFilters();
 loadRubricDescriptions();
 renderRubricDescriptions();
