@@ -97,6 +97,10 @@ const coinMoversStatus = document.getElementById('coin-movers-status');
 const stockMoversGrid = document.getElementById('stock-movers-grid');
 const stockMoversStatus = document.getElementById('stock-movers-status');
 const cryptoBubblesLink = document.getElementById('crypto-bubbles-link');
+const ursasIndexValue = document.getElementById('ursas-index');
+const ursasIndexState = document.getElementById('ursas-index-state');
+const ursasIndexFill = document.getElementById('ursas-index-fill');
+const ursasIndexBreakdown = document.getElementById('ursas-index-breakdown');
 const rubricEditorOverlay = document.getElementById('rubric-editor-overlay');
 const rubricEditorTitle = document.getElementById('rubric-editor-title');
 const rubricEditorText = document.getElementById('rubric-editor-text');
@@ -1777,6 +1781,45 @@ function renderMonitoringTargets() {
   });
 }
 
+function calculateUrsasIndex(newsItems = []) {
+  const totals = newsItems.reduce(
+    (acc, item) => {
+      const strength = Math.min(10, Math.max(1, Number(item.strength) || 1));
+      const sentiment = item.sentiment || 'neutral';
+      if (sentiment === 'bearish') acc.bear += strength;
+      if (sentiment === 'bullish') acc.bull += strength;
+      if (sentiment === 'neutral') acc.neutral += strength;
+      return acc;
+    },
+    { bear: 0, bull: 0, neutral: 0 },
+  );
+
+  const directionalTotal = totals.bear + totals.bull;
+  if (directionalTotal === 0) {
+    return { score: 50, state: 'Нейтрально', ...totals };
+  }
+
+  const directionalBias = (totals.bear - totals.bull) / directionalTotal;
+  const score = Math.round(Math.min(100, Math.max(0, 50 + directionalBias * 50)));
+
+  let state = 'Нейтрально';
+  if (score >= 70) state = 'Сильный медвежий режим';
+  else if (score >= 55) state = 'Умеренно медвежий режим';
+  else if (score <= 30) state = 'Сильный бычий режим (медвежий индекс низкий)';
+  else if (score <= 45) state = 'Умеренно бычий режим (медвежий индекс низкий)';
+
+  return { score, state, ...totals };
+}
+
+function renderUrsasIndex() {
+  if (!ursasIndexValue || !ursasIndexState || !ursasIndexFill || !ursasIndexBreakdown) return;
+  const indexData = calculateUrsasIndex(manualNewsQueue);
+  ursasIndexValue.textContent = String(indexData.score);
+  ursasIndexState.textContent = indexData.state;
+  ursasIndexFill.style.width = `${indexData.score}%`;
+  ursasIndexBreakdown.textContent = `Bear: ${indexData.bear} vs Bull: ${indexData.bull} (Neutral: ${indexData.neutral})`;
+}
+
 function setActiveMonitoringProvider(providerId) {
   const provider = getProviderConfig(providerId);
   activeMonitoringProvider = provider.id;
@@ -1796,6 +1839,8 @@ function resetManualNewsFormToCreateMode() {
   editingManualNewsId = null;
   manualNewsForm.reset();
   document.getElementById('news-source').value = 'manual';
+  document.getElementById('news-sentiment').value = 'bearish';
+  document.getElementById('news-strength').value = '1';
   if (manualNewsSubmitButton) {
     manualNewsSubmitButton.textContent = 'Добавить новость';
   }
@@ -1814,6 +1859,8 @@ function openManualNewsInEditMode(newsId) {
   document.getElementById('news-summary').value = item.summary || '';
   document.getElementById('news-source').value = item.source || 'manual';
   document.getElementById('news-tag').value = item.tag || 'рынок';
+  document.getElementById('news-sentiment').value = item.sentiment || 'neutral';
+  document.getElementById('news-strength').value = String(item.strength || 1);
   if (manualNewsImageInput) {
     manualNewsImageInput.value = '';
   }
@@ -1868,6 +1915,8 @@ manualNewsForm.addEventListener('submit', async (event) => {
     summary: document.getElementById('news-summary').value.trim(),
     source: document.getElementById('news-source').value.trim() || 'manual',
     tag: document.getElementById('news-tag').value,
+    sentiment: document.getElementById('news-sentiment').value,
+    strength: Math.min(10, Math.max(1, Number(document.getElementById('news-strength').value) || 1)),
     approved_for_video: false,
   };
 
@@ -1907,6 +1956,7 @@ manualNewsForm.addEventListener('submit', async (event) => {
   }
 
   renderNewsQueue();
+  renderUrsasIndex();
   resetManualNewsFormToCreateMode();
 });
 
@@ -1923,6 +1973,7 @@ function renderNewsQueue() {
     const empty = document.createElement('li');
     empty.textContent = 'Пока нет новостей в очереди.';
     newsList.appendChild(empty);
+    renderUrsasIndex();
     return;
   }
 
@@ -1934,8 +1985,11 @@ function renderNewsQueue() {
     text.className = 'news-queue-text';
     const linkSuffix = news.link ? ` (ссылка: ${news.link})` : '';
     const imageSuffix = news.image_name ? ` [файл: ${news.image_name}]` : '';
+    const sentimentLabel =
+      news.sentiment === 'bearish' ? '🐻 bearish' : news.sentiment === 'bullish' ? '🐂 bullish' : '😐 neutral';
+    const strengthSuffix = ` [сила: ${news.strength || 1}, ${sentimentLabel}]`;
     const approvedSuffix = news.approved_for_video ? ' ✅ Одобрено и добавлено в «Генерация ролика».' : '';
-    text.textContent = `${index + 1}. [${news.tag}] ${news.title}${linkSuffix}${imageSuffix} — ${news.summary}${approvedSuffix}`;
+    text.textContent = `${index + 1}. [${news.tag}] ${news.title}${linkSuffix}${imageSuffix}${strengthSuffix} — ${news.summary}${approvedSuffix}`;
 
     const actions = document.createElement('div');
     actions.className = 'news-queue-actions';
@@ -1963,6 +2017,7 @@ function renderNewsQueue() {
     li.append(text, actions);
     newsList.appendChild(li);
   });
+  renderUrsasIndex();
 }
 
 newsList.addEventListener('click', (event) => {
@@ -1990,6 +2045,7 @@ newsList.addEventListener('click', (event) => {
         resetManualNewsFormToCreateMode();
       }
       renderNewsQueue();
+      renderUrsasIndex();
     }
     return;
   }
@@ -2073,6 +2129,8 @@ function buildEpisodeScript(mode = 'preview') {
       narration_text: news.summary,
       source: news.source,
       tag: news.tag,
+      sentiment: news.sentiment || 'neutral',
+      sentiment_strength: Number(news.strength) || 1,
     })),
     rubrics: rubrics.length > 0 ? rubrics : [{ type: 'ursas_index', title: 'Ursas Index', enabled: true }],
     outro,
