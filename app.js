@@ -99,6 +99,11 @@ const coinLosersStatus = document.getElementById('coin-losers-status');
 const stockMoversGrid = document.getElementById('stock-movers-grid');
 const stockMoversStatus = document.getElementById('stock-movers-status');
 const cryptoBubblesLink = document.getElementById('crypto-bubbles-link');
+<<<<<<< codex/add-flip-clock-animation-for-day-number-czqvx5
+const cryptoBubblesFrameCap = document.getElementById('crypto-bubbles-frame-cap');
+const cryptoBubblesFrameDay = document.getElementById('crypto-bubbles-frame-day');
+const cryptoBubblesStatus = document.getElementById('crypto-bubbles-status');
+=======
 <<<<<<< codex/add-flip-clock-animation-for-day-number-g2ui6e
 const cryptoBubblesFrameCap = document.getElementById('crypto-bubbles-frame-cap');
 const cryptoBubblesFrameDay = document.getElementById('crypto-bubbles-frame-day');
@@ -111,6 +116,7 @@ const ursasIndexValue = document.getElementById('ursas-index');
 const ursasIndexState = document.getElementById('ursas-index-state');
 const ursasIndexFill = document.getElementById('ursas-index-fill');
 const ursasIndexBreakdown = document.getElementById('ursas-index-breakdown');
+>>>>>>> main
 >>>>>>> main
 const rubricEditorOverlay = document.getElementById('rubric-editor-overlay');
 const rubricEditorTitle = document.getElementById('rubric-editor-title');
@@ -1347,8 +1353,11 @@ function saveMoversFilters() {
     cryptoBubblesLink.href = `https://cryptobubbles.net/?theme=dark&currency=${encodeURIComponent(bubblesCurrency)}&size=marketcap`;
   }
   applyCryptoBubblesEmbeds(bubblesCurrency);
+<<<<<<< codex/add-flip-clock-animation-for-day-number-czqvx5
+=======
 =======
   updateCryptoBubblesEmbeds(filters);
+>>>>>>> main
 >>>>>>> main
 }
 
@@ -1362,7 +1371,10 @@ function loadMoversFilters() {
   saveMoversFilters();
 }
 
+<<<<<<< codex/add-flip-clock-animation-for-day-number-czqvx5
+=======
 <<<<<<< codex/add-flip-clock-animation-for-day-number-g2ui6e
+>>>>>>> main
 function applyCryptoBubblesEmbeds(currency = 'USD') {
   const normalizedCurrency = String(currency || 'USD').toUpperCase();
   if (cryptoBubblesFrameCap) {
@@ -1374,6 +1386,8 @@ function applyCryptoBubblesEmbeds(currency = 'USD') {
   if (cryptoBubblesStatus) {
     cryptoBubblesStatus.textContent =
       'Встроенный iframe загружен. Если виден отказ соединения/пустой экран, это ограничение самого сайта по встраиванию — используйте кнопку «Открыть Crypto Bubbles».';
+<<<<<<< codex/add-flip-clock-animation-for-day-number-czqvx5
+=======
 =======
 function buildCryptoBubblesUrl({
   currency = 'USD',
@@ -1418,6 +1432,7 @@ function updateCryptoBubblesEmbeds(filters = {}) {
   }
   if (cryptoBubblesStatus) {
     cryptoBubblesStatus.textContent = `Параметры: period=day, size=marketcap, content=marketcap, color=performance, currency=${bubblesCurrency}.`;
+>>>>>>> main
 >>>>>>> main
   }
 }
@@ -2403,7 +2418,10 @@ moversSaveSettingsButton?.addEventListener('click', () => {
 });
 moversRefreshButton?.addEventListener('click', loadMarketMovers);
 numberOfDaySpinButton?.addEventListener('click', runNumberOfDayFlip);
+<<<<<<< codex/add-flip-clock-animation-for-day-number-czqvx5
+=======
 <<<<<<< codex/add-flip-clock-animation-for-day-number-g2ui6e
+>>>>>>> main
 cryptoBubblesFrameCap?.addEventListener('load', () => {
   if (!cryptoBubblesStatus) return;
   cryptoBubblesStatus.textContent = 'Crypto Bubbles iframe загружен.';
@@ -2420,7 +2438,10 @@ cryptoBubblesFrameDay?.addEventListener('error', () => {
   if (!cryptoBubblesStatus) return;
   cryptoBubblesStatus.textContent = 'Не удалось загрузить iframe. Используйте кнопку «Открыть Crypto Bubbles».';
 });
+<<<<<<< codex/add-flip-clock-animation-for-day-number-czqvx5
 =======
+=======
+>>>>>>> main
 >>>>>>> main
 rubricEditorSave.addEventListener('click', saveActiveRubricDescription);
 rubricEditorClose.addEventListener('click', closeRubricEditor);
