@@ -787,6 +787,30 @@ button:hover {
   font-style: italic;
 }
 
+.ursas-index-value {
+  margin: 0;
+  font-size: 44px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.ursas-index-meter {
+  margin-top: 10px;
+  width: 100%;
+  height: 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: linear-gradient(90deg, #4bbf73 0%, #f0c14b 50%, #db5b66 100%);
+  overflow: hidden;
+}
+
+.ursas-index-fill {
+  width: 50%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.35);
+  transition: width 180ms ease;
+}
+
 .rubric-editor-modal {
   width: min(680px, 100%);
 }
