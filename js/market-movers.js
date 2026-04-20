@@ -195,7 +195,13 @@
 
     async function fetchStockMovers(filters) {
       const apiKey = filters.stockApiKey || 'demo';
-      if (!apiKey || apiKey.toLowerCase() === 'demo') {
+      const normalizedKey = String(apiKey || '').trim().toLowerCase();
+      if (
+        !normalizedKey
+        || normalizedKey === 'demo'
+        || normalizedKey === 'your_api_key'
+        || normalizedKey === 'paste_here'
+      ) {
         return {
           gainers: [],
           losers: [],
