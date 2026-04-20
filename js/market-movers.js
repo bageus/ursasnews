@@ -41,7 +41,11 @@
     refs,
     api,
     storage = globalScope.localStorage,
+    options = {},
   }) {
+    const {
+      enableCryptoBubblesEmbed = false,
+    } = options;
     const {
       moversVsCurrencyInput,
       moversStockApiKeyInput,
@@ -97,15 +101,21 @@
       if (cryptoBubblesLink) {
         cryptoBubblesLink.href = performanceUrl;
       }
-      if (cryptoBubblesFrameCap) {
-        cryptoBubblesFrameCap.src = marketCapUrl;
-      }
-      if (cryptoBubblesFrameDay) {
-        cryptoBubblesFrameDay.src = performanceUrl;
+      if (enableCryptoBubblesEmbed) {
+        if (cryptoBubblesFrameCap) {
+          cryptoBubblesFrameCap.src = marketCapUrl;
+        }
+        if (cryptoBubblesFrameDay) {
+          cryptoBubblesFrameDay.src = performanceUrl;
+        }
+      } else {
+        if (cryptoBubblesFrameCap) cryptoBubblesFrameCap.src = 'about:blank';
+        if (cryptoBubblesFrameDay) cryptoBubblesFrameDay.src = 'about:blank';
       }
       if (cryptoBubblesStatus) {
-        cryptoBubblesStatus.textContent =
-          'Встроенный iframe загружен. Если виден отказ соединения/пустой экран, это ограничение самого сайта по встраиванию — используйте кнопку «Открыть Crypto Bubbles».';
+        cryptoBubblesStatus.textContent = enableCryptoBubblesEmbed
+          ? 'Встроенный iframe загружен. Если виден отказ соединения/пустой экран, это ограничение самого сайта по встраиванию — используйте кнопку «Открыть Crypto Bubbles».'
+          : 'Crypto Bubbles обычно блокирует iframe (X-Frame-Options). Встроенный режим отключён: используйте кнопку «Открыть Crypto Bubbles».';
       }
     }
 
@@ -185,6 +195,14 @@
 
     async function fetchStockMovers(filters) {
       const apiKey = filters.stockApiKey || 'demo';
+      if (!apiKey || apiKey.toLowerCase() === 'demo') {
+        return {
+          gainers: [],
+          losers: [],
+          skipped: true,
+          reason: 'Для загрузки акций укажите рабочий FMP API key (demo ключ больше не поддерживается).',
+        };
+      }
       const [gainersResp, losersResp] = await Promise.all([
         fetch(`${api.fmpBaseUrl}/stock_market/gainers?apikey=${encodeURIComponent(apiKey)}`),
         fetch(`${api.fmpBaseUrl}/stock_market/losers?apikey=${encodeURIComponent(apiKey)}`),
@@ -258,9 +276,13 @@
       }
 
       if (stocksResult.status === 'fulfilled') {
-        renderMoversList(stockMoversGrid, '📈 Топ-10 растущих акций', stocksResult.value.gainers, 'stock');
-        renderMoversList(stockMoversGrid, '📉 Топ-10 падающих акций', stocksResult.value.losers, 'stock');
-        if (stockMoversStatus) stockMoversStatus.textContent = `Акции обновлены (${new Date().toLocaleTimeString('ru-RU')}).`;
+        if (stocksResult.value.skipped) {
+          if (stockMoversStatus) stockMoversStatus.textContent = stocksResult.value.reason;
+        } else {
+          renderMoversList(stockMoversGrid, '📈 Топ-10 растущих акций', stocksResult.value.gainers, 'stock');
+          renderMoversList(stockMoversGrid, '📉 Топ-10 падающих акций', stocksResult.value.losers, 'stock');
+          if (stockMoversStatus) stockMoversStatus.textContent = `Акции обновлены (${new Date().toLocaleTimeString('ru-RU')}).`;
+        }
       } else if (stockMoversStatus) {
         stockMoversStatus.textContent = `Ошибка акций: ${stocksResult.reason?.message || stocksResult.reason}`;
       }
@@ -274,6 +296,7 @@
     }
 
     function bindFrameStatusEvents() {
+      if (!enableCryptoBubblesEmbed) return;
       const onLoad = () => {
         if (!cryptoBubblesStatus) return;
         cryptoBubblesStatus.textContent = 'Crypto Bubbles iframe загружен.';
