@@ -52,6 +52,18 @@
             </select>
           </label>
           <label>
+            Тон новости
+            <select id="news-sentiment">
+              <option value="bearish">Плохая (медвежья)</option>
+              <option value="bullish">Хорошая (бычья)</option>
+              <option value="neutral">Нейтральная</option>
+            </select>
+          </label>
+          <label>
+            Коэффициент силы (1–10)
+            <input type="number" id="news-strength" min="1" max="10" value="1" required />
+          </label>
+          <label>
             Изображение новости
             <input type="file" id="news-image" accept="image/*" />
             <span id="news-image-file-status" class="hint">Файл не выбран</span>
@@ -325,7 +337,12 @@
               <button type="button" class="rubric-edit-btn" data-rubric-edit title="Добавить описание">✏️</button>
             </div>
             <h3>Ursas Index</h3>
-            <p id="ursas-index">42</p>
+            <p id="ursas-index" class="ursas-index-value">50</p>
+            <p id="ursas-index-state" class="hint">Нейтрально</p>
+            <div class="ursas-index-meter" role="img" aria-label="Индикатор медвежьих настроений">
+              <div id="ursas-index-fill" class="ursas-index-fill"></div>
+            </div>
+            <p id="ursas-index-breakdown" class="hint">Добавьте новости с коэффициентами, чтобы рассчитать индекс.</p>
             <p class="rubric-description" data-rubric-description></p>
           </div>
           <div class="card rubric-card" data-rubric-type="number_of_day" data-rubric-title="Число дня">
