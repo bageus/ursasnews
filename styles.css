@@ -779,6 +779,10 @@ button:hover {
   border-radius: 999px;
 }
 
+.rubric-filter-btn {
+  margin-right: auto;
+}
+
 .rubric-description {
   margin-top: 10px;
   padding-top: 10px;
@@ -992,20 +996,22 @@ button:hover {
 }
 
 .rubric-view-modal {
-  width: min(760px, 100%);
+  width: 100%;
   background: transparent;
   border: 0;
   padding: 0;
+  display: flex;
+  justify-content: center;
 }
 
 .rubric-view-frame {
-  width: min(720px, 92vw);
-  max-height: 84vh;
+  width: min(420px, 92vw);
+  height: min(746px, 84vh);
   border-radius: 16px;
   border: 1px solid #2f3863;
   background: #0f1530;
   padding: 20px;
-  overflow: auto;
+  overflow: hidden;
 }
 
 .rubric-view-frame h3 {
@@ -1021,6 +1027,12 @@ button:hover {
 
 .rubric-card-preview {
   position: relative;
+  height: 100%;
+  overflow: auto;
+}
+
+.rubric-filter-modal {
+  width: min(760px, 100%);
 }
 
 .movers-controls-card h3 {

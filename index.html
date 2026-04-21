@@ -368,7 +368,7 @@
             </div>
             <h3>Ursas Index</h3>
             <p id="ursas-index" class="ursas-index-value">50</p>
-            <p id="ursas-index-state" class="hint">Нейтрально</p>
+            <p id="ursas-index-state" class="hint">Bear</p>
             <div class="ursas-index-meter" role="img" aria-label="Индикатор медвежьих настроений">
               <div id="ursas-index-fill" class="ursas-index-fill"></div>
             </div>
@@ -379,12 +379,12 @@
             <p id="ursas-index-refresh-status" class="hint">Можно автоматически пересчитать индекс по ленте CoinDesk за последние 24 часа.</p>
             <p class="rubric-description" data-rubric-description></p>
           </div>
-          <div class="card rubric-card" data-rubric-type="number_of_day" data-rubric-title="Число дня">
+          <div class="card rubric-card" data-rubric-type="number_of_day" data-rubric-title="Daily Pick">
             <div class="rubric-card-actions">
               <button type="button" class="rubric-open-btn" data-rubric-open title="Открыть оверлей">👁️</button>
               <button type="button" class="rubric-edit-btn" data-rubric-edit title="Добавить описание">✏️</button>
             </div>
-            <h3>Число дня</h3>
+            <h3>Daily Pick</h3>
             <div class="number-of-day-widget">
               <div id="number-of-day-flip" class="flip-clock" aria-label="Flip clock для числа дня">
                 <div class="flip-digit" data-digit="0">
@@ -447,26 +447,28 @@
             </div>
             <p class="rubric-description" data-rubric-description></p>
           </div>
-          <div class="card rubric-card" data-rubric-type="top_10_coins_gainers" data-rubric-title="Top-10 монет роста">
+          <div class="card rubric-card" data-rubric-type="top_10_coins_gainers" data-rubric-title="Top Gainers">
             <div class="rubric-card-actions">
               <button type="button" class="rubric-open-btn" data-rubric-open title="Открыть оверлей">👁️</button>
               <button type="button" class="rubric-edit-btn" data-rubric-edit title="Добавить описание">✏️</button>
             </div>
-            <h3>Top-10 монет роста (24h)</h3>
+            <h3>Top Gainers</h3>
             <div class="row-actions">
+              <button type="button" class="rubric-filter-btn" data-rubric-filter="top_10_coins_gainers">Фильтры</button>
               <button type="button" id="coin-gainers-refresh" data-rubric-action>Обновить монеты роста</button>
             </div>
             <div id="coin-gainers-grid" class="movers-grid"></div>
             <p class="hint" id="coin-gainers-status">Загрузка ещё не запускалась.</p>
             <p class="rubric-description" data-rubric-description></p>
           </div>
-          <div class="card rubric-card" data-rubric-type="top_10_coins_losers" data-rubric-title="Top-10 монет падения">
+          <div class="card rubric-card" data-rubric-type="top_10_coins_losers" data-rubric-title="Top Losers">
             <div class="rubric-card-actions">
               <button type="button" class="rubric-open-btn" data-rubric-open title="Открыть оверлей">👁️</button>
               <button type="button" class="rubric-edit-btn" data-rubric-edit title="Добавить описание">✏️</button>
             </div>
-            <h3>Top-10 монет падения (24h)</h3>
+            <h3>Top Losers</h3>
             <div class="row-actions">
+              <button type="button" class="rubric-filter-btn" data-rubric-filter="top_10_coins_losers">Фильтры</button>
               <button type="button" id="coin-losers-refresh" data-rubric-action>Обновить монеты падения</button>
             </div>
             <div id="coin-losers-grid" class="movers-grid"></div>
@@ -510,12 +512,12 @@
             <p>Заглушка рубрики.</p>
             <p class="rubric-description" data-rubric-description></p>
           </div>
-          <div class="card rubric-card" data-rubric-type="ursass_tube_leaderboard" data-rubric-title="Ursass Tube leaderboard">
+          <div class="card rubric-card" data-rubric-type="ursass_tube_leaderboard" data-rubric-title="Ursass Tube Leaderboard">
             <div class="rubric-card-actions">
               <button type="button" class="rubric-open-btn" data-rubric-open title="Открыть оверлей">👁️</button>
               <button type="button" class="rubric-edit-btn" data-rubric-edit title="Добавить описание">✏️</button>
             </div>
-            <h3>Ursass Tube leaderboard</h3>
+            <h3>Ursass Tube Leaderboard</h3>
             <p id="tube-lb-status" class="hint">Загрузка...</p>
             <div id="tube-leaderboard-list" class="tube-leaderboard-list"></div>
             <button type="button" id="tube-lb-reload">Обновить</button>
@@ -574,6 +576,38 @@
       <div class="commands-modal rubric-view-modal">
         <div id="rubric-view-frame" class="rubric-view-frame">
           <div id="rubric-view-content"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="rubric-filter-overlay" class="commands-overlay">
+      <div class="commands-modal rubric-filter-modal">
+        <div class="commands-modal-head">
+          <h3 id="rubric-filter-title">Фильтры рубрики</h3>
+          <button type="button" id="rubric-filter-close">Закрыть</button>
+        </div>
+        <p class="hint">Настройки применяются к Top Gainers и Top Losers.</p>
+        <div class="settings-grid">
+          <label>
+            Валюта CoinGecko
+            <input id="rubric-filter-vs-currency" type="text" placeholder="usd" />
+          </label>
+          <label>
+            Min капитализация монет (USD)
+            <input id="rubric-filter-min-coin-cap" type="number" min="0" step="1000000" />
+          </label>
+          <label>
+            Max капитализация монет (USD)
+            <input id="rubric-filter-max-coin-cap" type="number" min="0" step="1000000" />
+          </label>
+          <label>
+            Min релевантность монет (объём/кап)
+            <input id="rubric-filter-min-coin-liquidity" type="number" min="0" max="10" step="0.01" />
+          </label>
+        </div>
+        <div class="row-actions">
+          <button type="button" id="rubric-filter-save">Сохранить фильтры</button>
+          <button type="button" id="rubric-filter-apply">Применить и обновить</button>
         </div>
       </div>
     </div>

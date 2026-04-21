@@ -134,7 +134,7 @@
         const nextValue = getNumberOfDayValue();
         setFlipClockNumber(nextValue, 220);
         if (statusNode) {
-          statusNode.textContent = `Число дня: ${String(nextValue).padStart(2, '0')} (CET)`;
+          statusNode.textContent = `Daily Pick: ${String(nextValue).padStart(2, '0')} (CET)`;
         }
         scheduleDailyRefresh();
       }, getMillisecondsUntilNextCETDay());
@@ -161,7 +161,7 @@
         setFlipClockNumber(nextValue, flipDuration);
 
         if (step === rounds) {
-          if (statusNode) statusNode.textContent = `Число дня: ${String(targetValue).padStart(2, '0')} (CET)`;
+          if (statusNode) statusNode.textContent = `Daily Pick: ${String(targetValue).padStart(2, '0')} (CET)`;
           if (spinButton) spinButton.disabled = false;
           isSpinning = false;
         }
@@ -183,7 +183,7 @@
       const initialValue = getNumberOfDayValue();
       setFlipClockNumber(initialValue, 0);
       if (statusNode) {
-        statusNode.textContent = `Число дня: ${String(initialValue).padStart(2, '0')} (CET)`;
+        statusNode.textContent = `Daily Pick: ${String(initialValue).padStart(2, '0')} (CET)`;
       }
       scheduleDailyRefresh();
     }
