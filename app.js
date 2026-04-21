@@ -8,8 +8,8 @@ const monitorTargetForm = document.getElementById('monitor-target-form');
 const monitorTargetLabel = document.getElementById('monitor-target-label');
 const monitorTargetInput = document.getElementById('monitor-target-input');
 const monitorTargetList = document.getElementById('monitor-target-list');
-const coindeskNegativeParseButton = document.getElementById('coindesk-negative-parse');
-const coindeskNegativeStatus = document.getElementById('coindesk-negative-status');
+const providerNegativeParseButton = document.getElementById('provider-negative-parse');
+const providerNegativeStatus = document.getElementById('provider-negative-status');
 const scriptOutput = document.getElementById('script-output');
 const mouthLayer = document.getElementById('mouth-layer');
 const speechModeInput = document.getElementById('speech-mode');
@@ -97,7 +97,28 @@ const RUBRIC_DESCRIPTIONS_KEY = 'ursasnews_rubric_descriptions_v1';
 let rubricDescriptions = {};
 let marketMoversController = null;
 let numberOfDayController = null;
-let coindeskParserInFlight = false;
+let providerParserInFlight = false;
+
+const providerNegativeParsers = {
+  coindesk: {
+    id: 'coindesk',
+    title: 'CoinDesk',
+    sourcePrefix: 'CoinDesk',
+    rssUrl: 'https://www.coindesk.com/arc/outboundfeeds/rss/',
+  },
+  bloomberg: {
+    id: 'bloomberg',
+    title: 'Bloomberg',
+    sourcePrefix: 'Bloomberg',
+    rssUrl: 'https://feeds.bloomberg.com/markets/news.rss',
+  },
+  reuters: {
+    id: 'reuters',
+    title: 'Reuters',
+    sourcePrefix: 'Reuters',
+    rssUrl: 'https://feeds.reuters.com/reuters/businessNews',
+  },
+};
 
 const appConfig = window.UrsasAppConfig || {};
 const monitoringProviders = appConfig.monitoringProviders || [
@@ -1501,17 +1522,37 @@ function setActiveMonitoringProvider(providerId) {
   activeMonitoringProvider = provider.id;
   monitorTargetLabel.textContent = provider.mode === 'prompt' ? 'Промпт для поиска' : 'Аккаунт для отслеживания';
   monitorTargetInput.placeholder = provider.hint;
-  if (coindeskNegativeParseButton) {
-    coindeskNegativeParseButton.disabled = provider.id !== 'coindesk' || coindeskParserInFlight;
-  }
+  updateProviderParserUi();
   renderMonitoringProviderTabs();
   renderMonitoringTargets();
 }
 
-function setCoindeskStatus(text, isError = false) {
-  if (!coindeskNegativeStatus) return;
-  coindeskNegativeStatus.textContent = text;
-  coindeskNegativeStatus.style.color = isError ? '#fda4af' : '';
+function setProviderParserStatus(text, isError = false) {
+  if (!providerNegativeStatus) return;
+  providerNegativeStatus.textContent = text;
+  providerNegativeStatus.style.color = isError ? '#fda4af' : '';
+}
+
+function getActiveProviderParserConfig() {
+  return providerNegativeParsers[activeMonitoringProvider] || null;
+}
+
+function updateProviderParserUi() {
+  const parserConfig = getActiveProviderParserConfig();
+  if (!providerNegativeParseButton) {
+    return;
+  }
+
+  if (!parserConfig) {
+    providerNegativeParseButton.hidden = true;
+    setProviderParserStatus('Выберите Reuters, Bloomberg или CoinDesk для парсинга.');
+    return;
+  }
+
+  providerNegativeParseButton.hidden = false;
+  providerNegativeParseButton.textContent = `Парсить негатив ${parserConfig.title} (24ч)`;
+  providerNegativeParseButton.disabled = providerParserInFlight;
+  setProviderParserStatus(`Готово к запуску парсинга ${parserConfig.title}.`);
 }
 
 function extractTextFromHtml(html) {
@@ -1540,16 +1581,21 @@ function buildStrengthFromHits(hits = 1) {
   return 2;
 }
 
-async function parseCoinDeskNegativeNewsLast24h() {
-  if (coindeskParserInFlight) return;
-  coindeskParserInFlight = true;
-  if (coindeskNegativeParseButton) {
-    coindeskNegativeParseButton.disabled = true;
+async function parseProviderNegativeNewsLast24h() {
+  const parserConfig = getActiveProviderParserConfig();
+  if (!parserConfig) {
+    setProviderParserStatus('Для парсинга выберите Reuters, Bloomberg или CoinDesk.', true);
+    return;
   }
-  setCoindeskStatus('Загрузка новостей CoinDesk...');
+  if (providerParserInFlight) return;
+
+  providerParserInFlight = true;
+  if (providerNegativeParseButton) {
+    providerNegativeParseButton.disabled = true;
+  }
+  setProviderParserStatus(`Загрузка новостей ${parserConfig.title}...`);
 
   try {
-    const rssUrl = 'https://www.coindesk.com/arc/outboundfeeds/rss/';
     const proxyCandidates = [
       {
         label: 'allorigins',
@@ -1566,7 +1612,7 @@ async function parseCoinDeskNegativeNewsLast24h() {
 
     for (const candidate of proxyCandidates) {
       try {
-        const response = await fetch(candidate.buildUrl(rssUrl), {
+        const response = await fetch(candidate.buildUrl(parserConfig.rssUrl), {
           method: 'GET',
           headers: { Accept: 'application/rss+xml, application/xml, text/xml;q=0.9, */*;q=0.8' },
           cache: 'no-store',
@@ -1581,7 +1627,7 @@ async function parseCoinDeskNegativeNewsLast24h() {
           throw new Error('Invalid RSS payload');
         }
 
-        setCoindeskStatus(`RSS загружен через ${candidate.label}. Анализ...`);
+        setProviderParserStatus(`RSS ${parserConfig.title} загружен через ${candidate.label}. Анализ...`);
         lastProxyError = null;
         break;
       } catch (proxyError) {
@@ -1622,12 +1668,13 @@ async function parseCoinDeskNegativeNewsLast24h() {
       if (existingTitles.has(title.toLowerCase())) return;
 
       const summary = description || title;
+      const prefixedTitle = `[${parserConfig.sourcePrefix}] ${title}`;
       manualNewsQueue.unshift({
         id: Date.now() + added,
-        title,
+        title: prefixedTitle,
         link,
         summary,
-        source: 'coindesk',
+        source: parserConfig.id,
         tag: 'рынок',
         sentiment: 'bearish',
         strength: buildStrengthFromHits(sentimentCheck.hits),
@@ -1640,15 +1687,17 @@ async function parseCoinDeskNegativeNewsLast24h() {
 
     renderNewsQueue();
     renderUrsasIndex();
-    setCoindeskStatus(added > 0 ? `Готово: добавлено ${added} негативных новостей за 24ч.` : 'За 24ч не найдено новых негативных новостей.');
+    setProviderParserStatus(
+      added > 0
+        ? `Готово: добавлено ${added} негативных новостей ${parserConfig.title} за 24ч.`
+        : `За 24ч не найдено новых негативных новостей ${parserConfig.title}.`,
+    );
   } catch (error) {
     const errorDetails = error?.message ? ` (${error.message})` : '';
-    setCoindeskStatus(`Не удалось загрузить CoinDesk RSS. Проверьте сеть / CORS-прокси${errorDetails}.`, true);
+    setProviderParserStatus(`Не удалось загрузить RSS ${parserConfig.title}. Проверьте сеть / CORS-прокси${errorDetails}.`, true);
   } finally {
-    coindeskParserInFlight = false;
-    if (coindeskNegativeParseButton) {
-      coindeskNegativeParseButton.disabled = activeMonitoringProvider !== 'coindesk';
-    }
+    providerParserInFlight = false;
+    updateProviderParserUi();
   }
 }
 
@@ -2000,7 +2049,7 @@ monitorTargetForm.addEventListener('submit', (event) => {
   renderMonitoringTargets();
 });
 
-coindeskNegativeParseButton?.addEventListener('click', parseCoinDeskNegativeNewsLast24h);
+providerNegativeParseButton?.addEventListener('click', parseProviderNegativeNewsLast24h);
 
 mouthPreviewButton.addEventListener('click', startMouthPreview);
 mouthStopButton.addEventListener('click', stopMouthPreview);
