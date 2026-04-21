@@ -8,6 +8,8 @@ const monitorTargetForm = document.getElementById('monitor-target-form');
 const monitorTargetLabel = document.getElementById('monitor-target-label');
 const monitorTargetInput = document.getElementById('monitor-target-input');
 const monitorTargetList = document.getElementById('monitor-target-list');
+const coindeskNegativeParseButton = document.getElementById('coindesk-negative-parse');
+const coindeskNegativeStatus = document.getElementById('coindesk-negative-status');
 const scriptOutput = document.getElementById('script-output');
 const mouthLayer = document.getElementById('mouth-layer');
 const speechModeInput = document.getElementById('speech-mode');
@@ -95,6 +97,7 @@ const RUBRIC_DESCRIPTIONS_KEY = 'ursasnews_rubric_descriptions_v1';
 let rubricDescriptions = {};
 let marketMoversController = null;
 let numberOfDayController = null;
+let coindeskParserInFlight = false;
 
 const appConfig = window.UrsasAppConfig || {};
 const monitoringProviders = appConfig.monitoringProviders || [
@@ -1498,8 +1501,118 @@ function setActiveMonitoringProvider(providerId) {
   activeMonitoringProvider = provider.id;
   monitorTargetLabel.textContent = provider.mode === 'prompt' ? 'Промпт для поиска' : 'Аккаунт для отслеживания';
   monitorTargetInput.placeholder = provider.hint;
+  if (coindeskNegativeParseButton) {
+    coindeskNegativeParseButton.disabled = provider.id !== 'coindesk' || coindeskParserInFlight;
+  }
   renderMonitoringProviderTabs();
   renderMonitoringTargets();
+}
+
+function setCoindeskStatus(text, isError = false) {
+  if (!coindeskNegativeStatus) return;
+  coindeskNegativeStatus.textContent = text;
+  coindeskNegativeStatus.style.color = isError ? '#fda4af' : '';
+}
+
+function extractTextFromHtml(html) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html || '', 'text/html');
+  return (doc.body?.textContent || '').trim();
+}
+
+function isNegativeCoinDeskItem(text = '') {
+  const normalized = text.toLowerCase();
+  const negativeKeywords = [
+    'hack', 'hacked', 'exploit', 'breach', 'lawsuit', 'sued', 'charge', 'charged', 'fraud', 'scam',
+    'liquidation', 'bankrupt', 'bankruptcy', 'insolv', 'collapse', 'crash', 'plunge', 'drop', 'down',
+    'decline', 'selloff', 'bearish', 'outflow', 'sanction', 'ban', 'banned', 'fine', 'fined', 'penalty',
+    'investigation', 'probe', 'warning', 'default', 'delist', 'delisting', 'loss', 'losses', 'stolen',
+  ];
+  const hits = negativeKeywords.reduce((acc, word) => (normalized.includes(word) ? acc + 1 : acc), 0);
+  return { isNegative: hits > 0, hits };
+}
+
+function buildStrengthFromHits(hits = 1) {
+  if (hits >= 5) return 9;
+  if (hits >= 4) return 7;
+  if (hits >= 3) return 5;
+  if (hits >= 2) return 3;
+  return 2;
+}
+
+async function parseCoinDeskNegativeNewsLast24h() {
+  if (coindeskParserInFlight) return;
+  coindeskParserInFlight = true;
+  if (coindeskNegativeParseButton) {
+    coindeskNegativeParseButton.disabled = true;
+  }
+  setCoindeskStatus('Загрузка новостей CoinDesk...');
+
+  try {
+    const rssUrl = 'https://www.coindesk.com/arc/outboundfeeds/rss/';
+    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(rssUrl)}`;
+    const response = await fetch(proxyUrl);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const xmlText = await response.text();
+    const xmlDoc = new DOMParser().parseFromString(xmlText, 'application/xml');
+    const parseError = xmlDoc.querySelector('parsererror');
+    if (parseError) {
+      throw new Error('XML parse error');
+    }
+
+    const nowTs = Date.now();
+    const cutoffTs = nowTs - 24 * 60 * 60 * 1000;
+    const items = Array.from(xmlDoc.querySelectorAll('item'));
+    const existingLinks = new Set(manualNewsQueue.map((item) => item.link).filter(Boolean));
+    const existingTitles = new Set(manualNewsQueue.map((item) => item.title.toLowerCase()));
+    let added = 0;
+
+    items.forEach((itemNode) => {
+      const title = (itemNode.querySelector('title')?.textContent || '').trim();
+      const link = (itemNode.querySelector('link')?.textContent || '').trim();
+      const descriptionHtml = itemNode.querySelector('description')?.textContent || '';
+      const description = extractTextFromHtml(descriptionHtml);
+      const pubDateRaw = itemNode.querySelector('pubDate')?.textContent || '';
+      const pubTs = Date.parse(pubDateRaw);
+
+      if (!title || !Number.isFinite(pubTs) || pubTs < cutoffTs) return;
+
+      const sentimentCheck = isNegativeCoinDeskItem(`${title} ${description}`);
+      if (!sentimentCheck.isNegative) return;
+      if (link && existingLinks.has(link)) return;
+      if (existingTitles.has(title.toLowerCase())) return;
+
+      const summary = description || title;
+      manualNewsQueue.unshift({
+        id: Date.now() + added,
+        title,
+        link,
+        summary,
+        source: 'coindesk',
+        tag: 'рынок',
+        sentiment: 'bearish',
+        strength: buildStrengthFromHits(sentimentCheck.hits),
+        approved_for_video: false,
+      });
+      added += 1;
+      if (link) existingLinks.add(link);
+      existingTitles.add(title.toLowerCase());
+    });
+
+    renderNewsQueue();
+    renderUrsasIndex();
+    setCoindeskStatus(added > 0 ? `Готово: добавлено ${added} негативных новостей за 24ч.` : 'За 24ч не найдено новых негативных новостей.');
+  } catch (error) {
+    setCoindeskStatus('Не удалось загрузить CoinDesk RSS. Проверьте доступ к сети или CORS-прокси.', true);
+  } finally {
+    coindeskParserInFlight = false;
+    if (coindeskNegativeParseButton) {
+      coindeskNegativeParseButton.disabled = activeMonitoringProvider !== 'coindesk';
+    }
+  }
 }
 
 function setManualNewsImageStatus(text = 'Файл не выбран') {
@@ -1849,6 +1962,8 @@ monitorTargetForm.addEventListener('submit', (event) => {
   monitorTargetForm.reset();
   renderMonitoringTargets();
 });
+
+coindeskNegativeParseButton?.addEventListener('click', parseCoinDeskNegativeNewsLast24h);
 
 mouthPreviewButton.addEventListener('click', startMouthPreview);
 mouthStopButton.addEventListener('click', stopMouthPreview);

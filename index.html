@@ -86,6 +86,24 @@
         </form>
 
         <div class="card">
+          <h3>Подключения и ручной мониторинг источников</h3>
+          <p class="hint">Выберите платформу, затем добавьте аккаунт для отслеживания или промпт для AI-поиска.</p>
+          <div id="monitor-provider-tabs" class="provider-tabs" aria-label="Платформы мониторинга"></div>
+          <form id="monitor-target-form" class="provider-form">
+            <label>
+              <span id="monitor-target-label">Аккаунт для отслеживания</span>
+              <input type="text" id="monitor-target-input" required />
+            </label>
+            <button type="submit">Добавить</button>
+          </form>
+          <div class="provider-form">
+            <button type="button" id="coindesk-negative-parse">Парсить негатив CoinDesk (24ч)</button>
+            <span id="coindesk-negative-status" class="hint">Готово к запуску.</span>
+          </div>
+          <ul id="monitor-target-list" class="list"></ul>
+        </div>
+
+        <div class="card">
           <h3>Очередь новостей в выпуск</h3>
           <ul id="news-list" class="list"></ul>
         </div>
