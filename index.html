@@ -24,20 +24,6 @@
         <h2>Лента новостей — отладочный режим</h2>
         <p>На первом этапе новости добавляются вручную, без RSS/парсеров.</p>
 
-        <div class="card">
-          <h3>Подключения и ручной мониторинг источников</h3>
-          <p class="hint">Выберите платформу, затем добавьте аккаунт для отслеживания или промпт для AI-поиска.</p>
-          <div id="monitor-provider-tabs" class="provider-tabs" aria-label="Платформы мониторинга"></div>
-          <form id="monitor-target-form" class="provider-form">
-            <label>
-              <span id="monitor-target-label">Аккаунт для отслеживания</span>
-              <input type="text" id="monitor-target-input" required />
-            </label>
-            <button type="submit">Добавить</button>
-          </form>
-          <ul id="monitor-target-list" class="list"></ul>
-        </div>
-
         <form id="manual-news-form" class="card form-grid">
           <label>
             Заголовок
@@ -97,8 +83,8 @@
             <button type="submit">Добавить</button>
           </form>
           <div class="provider-form">
-            <button type="button" id="coindesk-negative-parse">Парсить негатив CoinDesk (24ч)</button>
-            <span id="coindesk-negative-status" class="hint">Готово к запуску.</span>
+            <button type="button" id="provider-negative-parse" hidden>Парсить негатив (24ч)</button>
+            <span id="provider-negative-status" class="hint">Выберите Reuters, Bloomberg или CoinDesk для парсинга.</span>
           </div>
           <ul id="monitor-target-list" class="list"></ul>
         </div>
