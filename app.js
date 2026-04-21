@@ -62,8 +62,10 @@ const moversSaveSettingsButton = document.getElementById('movers-save-settings')
 const moversStatus = document.getElementById('movers-status');
 const coinGainersGrid = document.getElementById('coin-gainers-grid');
 const coinGainersStatus = document.getElementById('coin-gainers-status');
+const coinGainersRefreshButton = document.getElementById('coin-gainers-refresh');
 const coinLosersGrid = document.getElementById('coin-losers-grid');
 const coinLosersStatus = document.getElementById('coin-losers-status');
+const coinLosersRefreshButton = document.getElementById('coin-losers-refresh');
 const stockMoversGrid = document.getElementById('stock-movers-grid');
 const stockMoversStatus = document.getElementById('stock-movers-status');
 const cryptoBubblesLink = document.getElementById('crypto-bubbles-link');
@@ -2210,6 +2212,8 @@ subtitleJoystick.addEventListener('click', (event) => {
 tubeLeaderboardReload.addEventListener('click', loadTubeLeaderboard);
 moversSaveSettingsButton?.addEventListener('click', () => marketMoversController?.saveAndReload());
 moversRefreshButton?.addEventListener('click', () => marketMoversController?.load());
+coinGainersRefreshButton?.addEventListener('click', () => marketMoversController?.loadCoinGainers());
+coinLosersRefreshButton?.addEventListener('click', () => marketMoversController?.loadCoinLosers());
 ursasIndexRefreshButton?.addEventListener('click', refreshUrsasIndexFromCoinDesk);
 numberOfDaySpinButton?.addEventListener('click', () => numberOfDayController?.runFlip());
 rubricEditorSave.addEventListener('click', saveActiveRubricDescription);

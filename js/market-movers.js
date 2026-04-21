@@ -317,6 +317,46 @@
       if (moversStatus) moversStatus.textContent = 'Обновление завершено. Если акции не загрузились — проверьте FMP API key.';
     }
 
+    async function loadCoinGainers() {
+      if (!coinGainersGrid) return;
+      const filters = getFilters();
+      if (coinGainersStatus) coinGainersStatus.textContent = 'Загрузка монет роста...';
+      coinGainersGrid.innerHTML = '';
+
+      try {
+        const coins = await fetchCoinMovers(filters);
+        renderMoversList(coinGainersGrid, '🚀 Топ-10 растущих монет', coins.gainers, 'coin');
+        const updatedAt = new Date().toLocaleTimeString('ru-RU');
+        if (coinGainersStatus) {
+          coinGainersStatus.textContent = coins.gainers.length > 0
+            ? `Монеты роста обновлены (${updatedAt}).`
+            : 'Монеты роста не найдены — ослабьте фильтры (капитализация/ликвидность).';
+        }
+      } catch (error) {
+        if (coinGainersStatus) coinGainersStatus.textContent = `Ошибка монет: ${error?.message || error}`;
+      }
+    }
+
+    async function loadCoinLosers() {
+      if (!coinLosersGrid) return;
+      const filters = getFilters();
+      if (coinLosersStatus) coinLosersStatus.textContent = 'Загрузка монет падения...';
+      coinLosersGrid.innerHTML = '';
+
+      try {
+        const coins = await fetchCoinMovers(filters);
+        renderMoversList(coinLosersGrid, '🔻 Топ-10 падающих монет', coins.losers, 'coin');
+        const updatedAt = new Date().toLocaleTimeString('ru-RU');
+        if (coinLosersStatus) {
+          coinLosersStatus.textContent = coins.losers.length > 0
+            ? `Монеты падения обновлены (${updatedAt}).`
+            : 'Монеты падения не найдены — ослабьте фильтры (капитализация/ликвидность).';
+        }
+      } catch (error) {
+        if (coinLosersStatus) coinLosersStatus.textContent = `Ошибка монет: ${error?.message || error}`;
+      }
+    }
+
     function saveAndReload() {
       saveFilters();
       return load();
@@ -340,6 +380,8 @@
 
     return {
       load,
+      loadCoinGainers,
+      loadCoinLosers,
       loadFilters,
       saveFilters,
       saveAndReload,
