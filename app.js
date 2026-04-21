@@ -74,6 +74,8 @@ const ursasIndexValue = document.getElementById('ursas-index');
 const ursasIndexState = document.getElementById('ursas-index-state');
 const ursasIndexFill = document.getElementById('ursas-index-fill');
 const ursasIndexBreakdown = document.getElementById('ursas-index-breakdown');
+const ursasIndexRefreshButton = document.getElementById('ursas-index-refresh');
+const ursasIndexRefreshStatus = document.getElementById('ursas-index-refresh-status');
 const rubricEditorOverlay = document.getElementById('rubric-editor-overlay');
 const rubricEditorTitle = document.getElementById('rubric-editor-title');
 const rubricEditorText = document.getElementById('rubric-editor-text');
@@ -98,6 +100,7 @@ let rubricDescriptions = {};
 let marketMoversController = null;
 let numberOfDayController = null;
 let providerParserInFlight = false;
+let ursasIndexRefreshInFlight = false;
 
 const providerNegativeParsers = {
   coindesk: {
@@ -1517,6 +1520,65 @@ function renderUrsasIndex() {
   ursasIndexBreakdown.textContent = `Bear: ${indexData.bear} vs Bull: ${indexData.bull} (Neutral: ${indexData.neutral})`;
 }
 
+async function refreshUrsasIndexFromCoinDesk() {
+  if (!ursasIndexRefreshButton || !ursasIndexRefreshStatus || ursasIndexRefreshInFlight) return;
+  ursasIndexRefreshInFlight = true;
+  ursasIndexRefreshButton.disabled = true;
+  ursasIndexRefreshStatus.textContent = 'Обновляю индекс: загружаю CoinDesk RSS...';
+
+  try {
+    const { xmlText, proxyLabel } = await fetchRssXmlThroughProxy(providerNegativeParsers.coindesk.rssUrl);
+    const xmlDoc = new DOMParser().parseFromString(xmlText, 'application/xml');
+    const parseError = xmlDoc.querySelector('parsererror');
+    if (parseError) throw new Error('XML parse error');
+
+    const nowTs = Date.now();
+    const cutoffTs = nowTs - 24 * 60 * 60 * 1000;
+    const items = Array.from(xmlDoc.querySelectorAll('item'));
+    const stats = {
+      bearish: { count: 0, strength: 0 },
+      bullish: { count: 0, strength: 0 },
+      neutral: { count: 0, strength: 0 },
+    };
+
+    items.forEach((itemNode) => {
+      const title = (itemNode.querySelector('title')?.textContent || '').trim();
+      const descriptionHtml = itemNode.querySelector('description')?.textContent || '';
+      const description = extractTextFromHtml(descriptionHtml);
+      const pubDateRaw = itemNode.querySelector('pubDate')?.textContent || '';
+      const pubTs = Date.parse(pubDateRaw);
+      if (!title || !Number.isFinite(pubTs) || pubTs < cutoffTs) return;
+
+      const sentimentData = detectCoinDeskSentiment(`${title} ${description}`);
+      stats[sentimentData.sentiment].count += 1;
+      stats[sentimentData.sentiment].strength += sentimentData.strength;
+    });
+
+    const totalCount = stats.bearish.count + stats.bullish.count + stats.neutral.count;
+    if (totalCount === 0) {
+      ursasIndexRefreshStatus.textContent = 'CoinDesk: за последние 24ч новостей не найдено.';
+      return;
+    }
+
+    const indexData = calculateUrsasIndex([
+      { sentiment: 'bearish', strength: stats.bearish.strength || 1 },
+      { sentiment: 'bullish', strength: stats.bullish.strength || 1 },
+      { sentiment: 'neutral', strength: stats.neutral.strength || 1 },
+    ]);
+    ursasIndexValue.textContent = String(indexData.score);
+    ursasIndexState.textContent = indexData.state;
+    ursasIndexFill.style.width = `${indexData.score}%`;
+    ursasIndexBreakdown.textContent = `CoinDesk 24ч → Bear: ${stats.bearish.strength} (${stats.bearish.count}) vs Bull: ${stats.bullish.strength} (${stats.bullish.count}) (Neutral: ${stats.neutral.strength}, ${stats.neutral.count})`;
+    ursasIndexRefreshStatus.textContent = `Индекс обновлён по CoinDesk за 24ч через ${proxyLabel}.`;
+  } catch (error) {
+    const details = error?.message ? ` (${error.message})` : '';
+    ursasIndexRefreshStatus.textContent = `Не удалось обновить индекс CoinDesk${details}.`;
+  } finally {
+    ursasIndexRefreshInFlight = false;
+    ursasIndexRefreshButton.disabled = false;
+  }
+}
+
 function setActiveMonitoringProvider(providerId) {
   const provider = getProviderConfig(providerId);
   activeMonitoringProvider = provider.id;
@@ -1581,6 +1643,56 @@ function buildStrengthFromHits(hits = 1) {
   return 2;
 }
 
+function detectCoinDeskSentiment(text = '') {
+  const normalized = text.toLowerCase();
+  const bearishMatches = [
+    'hack', 'hacked', 'exploit', 'breach', 'lawsuit', 'sued', 'fraud', 'scam',
+    'liquidation', 'bankrupt', 'bankruptcy', 'insolv', 'collapse', 'crash', 'plunge', 'drop',
+    'decline', 'selloff', 'bearish', 'outflow', 'sanction', 'ban', 'fined', 'investigation', 'loss',
+  ].reduce((acc, token) => (normalized.includes(token) ? acc + 1 : acc), 0);
+  const bullishMatches = [
+    'approval', 'approved', 'etf inflow', 'record high', 'all-time high', 'surge', 'rally', 'breakout',
+    'partnership', 'adoption', 'upgrade', 'profit', 'buyback', 'funding', 'bullish', 'inflow',
+  ].reduce((acc, token) => (normalized.includes(token) ? acc + 1 : acc), 0);
+
+  if (bearishMatches > bullishMatches && bearishMatches > 0) {
+    return { sentiment: 'bearish', strength: Math.min(10, 1 + bearishMatches * 2) };
+  }
+  if (bullishMatches > bearishMatches && bullishMatches > 0) {
+    return { sentiment: 'bullish', strength: Math.min(10, 1 + bullishMatches * 2) };
+  }
+  return { sentiment: 'neutral', strength: 1 };
+}
+
+async function fetchRssXmlThroughProxy(rssUrl) {
+  const proxyCandidates = [
+    { label: 'allorigins', buildUrl: (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}` },
+    { label: 'corsproxy', buildUrl: (url) => `https://corsproxy.io/?${encodeURIComponent(url)}` },
+  ];
+
+  let lastProxyError = null;
+  for (const candidate of proxyCandidates) {
+    try {
+      const response = await fetch(candidate.buildUrl(rssUrl), {
+        method: 'GET',
+        headers: { Accept: 'application/rss+xml, application/xml, text/xml;q=0.9, */*;q=0.8' },
+        cache: 'no-store',
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+      const xmlText = await response.text();
+      if (!xmlText || !xmlText.includes('<rss')) {
+        throw new Error('Invalid RSS payload');
+      }
+      return { xmlText, proxyLabel: candidate.label };
+    } catch (proxyError) {
+      lastProxyError = `${candidate.label}: ${proxyError.message}`;
+    }
+  }
+
+  throw new Error(lastProxyError || 'No proxy available');
+}
+
 async function parseProviderNegativeNewsLast24h() {
   const parserConfig = getActiveProviderParserConfig();
   if (!parserConfig) {
@@ -1596,48 +1708,8 @@ async function parseProviderNegativeNewsLast24h() {
   setProviderParserStatus(`Загрузка новостей ${parserConfig.title}...`);
 
   try {
-    const proxyCandidates = [
-      {
-        label: 'allorigins',
-        buildUrl: (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-      },
-      {
-        label: 'corsproxy',
-        buildUrl: (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-      },
-    ];
-
-    let xmlText = '';
-    let lastProxyError = null;
-
-    for (const candidate of proxyCandidates) {
-      try {
-        const response = await fetch(candidate.buildUrl(parserConfig.rssUrl), {
-          method: 'GET',
-          headers: { Accept: 'application/rss+xml, application/xml, text/xml;q=0.9, */*;q=0.8' },
-          cache: 'no-store',
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-
-        xmlText = await response.text();
-        if (!xmlText || !xmlText.includes('<rss')) {
-          throw new Error('Invalid RSS payload');
-        }
-
-        setProviderParserStatus(`RSS ${parserConfig.title} загружен через ${candidate.label}. Анализ...`);
-        lastProxyError = null;
-        break;
-      } catch (proxyError) {
-        lastProxyError = `${candidate.label}: ${proxyError.message}`;
-      }
-    }
-
-    if (!xmlText) {
-      throw new Error(lastProxyError || 'No proxy available');
-    }
+    const { xmlText, proxyLabel } = await fetchRssXmlThroughProxy(parserConfig.rssUrl);
+    setProviderParserStatus(`RSS ${parserConfig.title} загружен через ${proxyLabel}. Анализ...`);
 
     const xmlDoc = new DOMParser().parseFromString(xmlText, 'application/xml');
     const parseError = xmlDoc.querySelector('parsererror');
@@ -1855,13 +1927,12 @@ function renderNewsQueue() {
 
     const text = document.createElement('div');
     text.className = 'news-queue-text';
-    const linkSuffix = news.link ? ` (ссылка: ${news.link})` : '';
     const imageSuffix = news.image_name ? ` [файл: ${news.image_name}]` : '';
     const sentimentLabel =
       news.sentiment === 'bearish' ? '🐻 bearish' : news.sentiment === 'bullish' ? '🐂 bullish' : '😐 neutral';
     const strengthSuffix = ` [сила: ${news.strength || 1}, ${sentimentLabel}]`;
     const approvedSuffix = news.approved_for_video ? ' ✅ Одобрено и добавлено в «Генерация ролика».' : '';
-    text.textContent = `${index + 1}. [${news.tag}] ${news.title}${linkSuffix}${imageSuffix}${strengthSuffix} — ${news.summary}${approvedSuffix}`;
+    text.textContent = `${index + 1}. [${news.tag}] ${news.title}${imageSuffix}${strengthSuffix} — ${news.summary}${approvedSuffix}`;
 
     const actions = document.createElement('div');
     actions.className = 'news-queue-actions';
@@ -1886,6 +1957,16 @@ function renderNewsQueue() {
     approveButton.dataset.newsId = String(news.id);
 
     actions.append(editButton, deleteButton, approveButton);
+
+    if (news.link && isValidHttpUrl(news.link)) {
+      const sourceLink = document.createElement('a');
+      sourceLink.href = news.link;
+      sourceLink.target = '_blank';
+      sourceLink.rel = 'noopener noreferrer';
+      sourceLink.className = 'button-link';
+      sourceLink.textContent = 'Первоисточник';
+      actions.appendChild(sourceLink);
+    }
     li.append(text, actions);
     newsList.appendChild(li);
   });
@@ -2129,6 +2210,7 @@ subtitleJoystick.addEventListener('click', (event) => {
 tubeLeaderboardReload.addEventListener('click', loadTubeLeaderboard);
 moversSaveSettingsButton?.addEventListener('click', () => marketMoversController?.saveAndReload());
 moversRefreshButton?.addEventListener('click', () => marketMoversController?.load());
+ursasIndexRefreshButton?.addEventListener('click', refreshUrsasIndexFromCoinDesk);
 numberOfDaySpinButton?.addEventListener('click', () => numberOfDayController?.runFlip());
 rubricEditorSave.addEventListener('click', saveActiveRubricDescription);
 rubricEditorClose.addEventListener('click', closeRubricEditor);
