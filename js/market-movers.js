@@ -27,6 +27,19 @@
     return Number(rawValue.replace(/[()%+\s]/g, ''));
   }
 
+  function parseCoinChangePercent(coin) {
+    const direct24h = Number(coin?.price_change_percentage_24h);
+    if (Number.isFinite(direct24h)) return direct24h;
+
+    const inCurrency24h = Number(coin?.price_change_percentage_24h_in_currency);
+    if (Number.isFinite(inCurrency24h)) return inCurrency24h;
+
+    const nested = Number(coin?.price_change_percentage?.['24h']);
+    if (Number.isFinite(nested)) return nested;
+
+    return NaN;
+  }
+
   function buildCryptoBubblesUrl({ currency = 'USD', size = 'marketcap', period = 'day' } = {}) {
     const normalizedCurrency = String(currency || 'USD').toUpperCase();
     const url = new URL('https://cryptobubbles.net/');
@@ -177,13 +190,13 @@
         if (Number.isFinite(filters.minCoinCap) && cap < filters.minCoinCap) return false;
         if (Number.isFinite(filters.maxCoinCap) && cap > filters.maxCoinCap) return false;
         if (Number.isFinite(filters.minCoinLiquidity) && liquidity < filters.minCoinLiquidity) return false;
-        return Number.isFinite(Number(coin.price_change_percentage_24h));
+        return Number.isFinite(parseCoinChangePercent(coin));
       });
 
       const mapped = filtered.map((coin) => ({
         symbol: String(coin.symbol || '').toUpperCase(),
         name: coin.name || '',
-        change: Number(coin.price_change_percentage_24h || 0),
+        change: parseCoinChangePercent(coin),
         marketCap: Number(coin.market_cap || 0),
       }));
 
@@ -273,8 +286,16 @@
         renderMoversList(coinGainersGrid, '🚀 Топ-10 растущих монет', coinsResult.value.gainers, 'coin');
         renderMoversList(coinLosersGrid, '🔻 Топ-10 падающих монет', coinsResult.value.losers, 'coin');
         const updatedAt = new Date().toLocaleTimeString('ru-RU');
-        if (coinGainersStatus) coinGainersStatus.textContent = `Монеты роста обновлены (${updatedAt}).`;
-        if (coinLosersStatus) coinLosersStatus.textContent = `Монеты падения обновлены (${updatedAt}).`;
+        if (coinGainersStatus) {
+          coinGainersStatus.textContent = coinsResult.value.gainers.length > 0
+            ? `Монеты роста обновлены (${updatedAt}).`
+            : 'Монеты роста не найдены — ослабьте фильтры (капитализация/ликвидность).';
+        }
+        if (coinLosersStatus) {
+          coinLosersStatus.textContent = coinsResult.value.losers.length > 0
+            ? `Монеты падения обновлены (${updatedAt}).`
+            : 'Монеты падения не найдены — ослабьте фильтры (капитализация/ликвидность).';
+        }
       } else {
         const errorMessage = `Ошибка монет: ${coinsResult.reason?.message || coinsResult.reason}`;
         if (coinGainersStatus) coinGainersStatus.textContent = errorMessage;
