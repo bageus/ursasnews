@@ -59,6 +59,16 @@
     const {
       enableCryptoBubblesEmbed = false,
     } = options;
+    let cachedFilters = {
+      vsCurrency: 'usd',
+      stockApiKey: 'demo',
+      minCoinCap: null,
+      maxCoinCap: null,
+      minCoinLiquidity: 0,
+      minStockCap: null,
+      maxStockCap: null,
+      minStockVolume: 0,
+    };
     const {
       moversVsCurrencyInput,
       moversStockApiKeyInput,
@@ -83,27 +93,30 @@
 
     function getFilters() {
       return {
-        vsCurrency: (moversVsCurrencyInput?.value || 'usd').trim().toLowerCase() || 'usd',
-        stockApiKey: (moversStockApiKeyInput?.value || 'demo').trim() || 'demo',
-        minCoinCap: toNumberOrNull(moversMinCoinCapInput?.value),
-        maxCoinCap: toNumberOrNull(moversMaxCoinCapInput?.value),
-        minCoinLiquidity: Math.max(0, toNumberOrNull(moversMinCoinLiquidityInput?.value) ?? 0),
-        minStockCap: toNumberOrNull(moversMinStockCapInput?.value),
-        maxStockCap: toNumberOrNull(moversMaxStockCapInput?.value),
-        minStockVolume: Math.max(0, toNumberOrNull(moversMinStockVolumeInput?.value) ?? 0),
+        vsCurrency: (moversVsCurrencyInput?.value || cachedFilters.vsCurrency || 'usd').trim().toLowerCase() || 'usd',
+        stockApiKey: (moversStockApiKeyInput?.value || cachedFilters.stockApiKey || 'demo').trim() || 'demo',
+        minCoinCap: toNumberOrNull(moversMinCoinCapInput?.value) ?? cachedFilters.minCoinCap,
+        maxCoinCap: toNumberOrNull(moversMaxCoinCapInput?.value) ?? cachedFilters.maxCoinCap,
+        minCoinLiquidity: Math.max(0, toNumberOrNull(moversMinCoinLiquidityInput?.value) ?? cachedFilters.minCoinLiquidity ?? 0),
+        minStockCap: toNumberOrNull(moversMinStockCapInput?.value) ?? cachedFilters.minStockCap,
+        maxStockCap: toNumberOrNull(moversMaxStockCapInput?.value) ?? cachedFilters.maxStockCap,
+        minStockVolume: Math.max(0, toNumberOrNull(moversMinStockVolumeInput?.value) ?? cachedFilters.minStockVolume ?? 0),
       };
     }
 
     function applyFilters(filters = {}) {
-      if (!moversVsCurrencyInput) return;
-      moversVsCurrencyInput.value = filters.vsCurrency || 'usd';
-      moversStockApiKeyInput.value = filters.stockApiKey || '';
-      moversMinCoinCapInput.value = Number.isFinite(filters.minCoinCap) ? filters.minCoinCap : '';
-      moversMaxCoinCapInput.value = Number.isFinite(filters.maxCoinCap) ? filters.maxCoinCap : '';
-      moversMinCoinLiquidityInput.value = Number.isFinite(filters.minCoinLiquidity) ? filters.minCoinLiquidity : 0.01;
-      moversMinStockCapInput.value = Number.isFinite(filters.minStockCap) ? filters.minStockCap : '';
-      moversMaxStockCapInput.value = Number.isFinite(filters.maxStockCap) ? filters.maxStockCap : '';
-      moversMinStockVolumeInput.value = Number.isFinite(filters.minStockVolume) ? filters.minStockVolume : '';
+      cachedFilters = {
+        ...cachedFilters,
+        ...filters,
+      };
+      if (moversVsCurrencyInput) moversVsCurrencyInput.value = cachedFilters.vsCurrency || 'usd';
+      if (moversStockApiKeyInput) moversStockApiKeyInput.value = cachedFilters.stockApiKey || '';
+      if (moversMinCoinCapInput) moversMinCoinCapInput.value = Number.isFinite(cachedFilters.minCoinCap) ? cachedFilters.minCoinCap : '';
+      if (moversMaxCoinCapInput) moversMaxCoinCapInput.value = Number.isFinite(cachedFilters.maxCoinCap) ? cachedFilters.maxCoinCap : '';
+      if (moversMinCoinLiquidityInput) moversMinCoinLiquidityInput.value = Number.isFinite(cachedFilters.minCoinLiquidity) ? cachedFilters.minCoinLiquidity : '';
+      if (moversMinStockCapInput) moversMinStockCapInput.value = Number.isFinite(cachedFilters.minStockCap) ? cachedFilters.minStockCap : '';
+      if (moversMaxStockCapInput) moversMaxStockCapInput.value = Number.isFinite(cachedFilters.maxStockCap) ? cachedFilters.maxStockCap : '';
+      if (moversMinStockVolumeInput) moversMinStockVolumeInput.value = Number.isFinite(cachedFilters.minStockVolume) ? cachedFilters.minStockVolume : '';
     }
 
     function updateCryptoBubblesEmbeds(filters = {}) {
@@ -187,9 +200,13 @@
         const cap = Number(coin.market_cap || 0);
         const volume = Number(coin.total_volume || 0);
         const liquidity = cap > 0 ? volume / cap : 0;
+        const minCoinLiquidity = Number(filters.minCoinLiquidity || 0);
         if (Number.isFinite(filters.minCoinCap) && cap < filters.minCoinCap) return false;
         if (Number.isFinite(filters.maxCoinCap) && cap > filters.maxCoinCap) return false;
-        if (Number.isFinite(filters.minCoinLiquidity) && liquidity < filters.minCoinLiquidity) return false;
+        if (Number.isFinite(minCoinLiquidity) && minCoinLiquidity > 0) {
+          if (minCoinLiquidity > 1 && volume < minCoinLiquidity) return false;
+          if (minCoinLiquidity <= 1 && liquidity < minCoinLiquidity) return false;
+        }
         return Number.isFinite(parseCoinChangePercent(coin));
       });
 
@@ -289,12 +306,12 @@
         if (coinGainersStatus) {
           coinGainersStatus.textContent = coinsResult.value.gainers.length > 0
             ? `Монеты роста обновлены (${updatedAt}).`
-            : 'Монеты роста не найдены — ослабьте фильтры (капитализация/ликвидность).';
+            : 'Монеты роста не найдены — ослабьте фильтры (капитализация/ликвидность/объём).';
         }
         if (coinLosersStatus) {
           coinLosersStatus.textContent = coinsResult.value.losers.length > 0
             ? `Монеты падения обновлены (${updatedAt}).`
-            : 'Монеты падения не найдены — ослабьте фильтры (капитализация/ликвидность).';
+            : 'Монеты падения не найдены — ослабьте фильтры (капитализация/ликвидность/объём).';
         }
       } else {
         const errorMessage = `Ошибка монет: ${coinsResult.reason?.message || coinsResult.reason}`;
@@ -330,7 +347,7 @@
         if (coinGainersStatus) {
           coinGainersStatus.textContent = coins.gainers.length > 0
             ? `Монеты роста обновлены (${updatedAt}).`
-            : 'Монеты роста не найдены — ослабьте фильтры (капитализация/ликвидность).';
+            : 'Монеты роста не найдены — ослабьте фильтры (капитализация/ликвидность/объём).';
         }
       } catch (error) {
         if (coinGainersStatus) coinGainersStatus.textContent = `Ошибка монет: ${error?.message || error}`;
@@ -350,7 +367,7 @@
         if (coinLosersStatus) {
           coinLosersStatus.textContent = coins.losers.length > 0
             ? `Монеты падения обновлены (${updatedAt}).`
-            : 'Монеты падения не найдены — ослабьте фильтры (капитализация/ликвидность).';
+            : 'Монеты падения не найдены — ослабьте фильтры (капитализация/ликвидность/объём).';
         }
       } catch (error) {
         if (coinLosersStatus) coinLosersStatus.textContent = `Ошибка монет: ${error?.message || error}`;

@@ -98,6 +98,10 @@ const rubricFilterMaxCoinCap = document.getElementById('rubric-filter-max-coin-c
 const rubricFilterMinCoinLiquidity = document.getElementById('rubric-filter-min-coin-liquidity');
 const rubricFilterSave = document.getElementById('rubric-filter-save');
 const rubricFilterApply = document.getElementById('rubric-filter-apply');
+const moversVsCurrencyField = moversVsCurrencyInput || rubricFilterVsCurrency;
+const moversMinCoinCapField = moversMinCoinCapInput || rubricFilterMinCoinCap;
+const moversMaxCoinCapField = moversMaxCoinCapInput || rubricFilterMaxCoinCap;
+const moversMinCoinLiquidityField = moversMinCoinLiquidityInput || rubricFilterMinCoinLiquidity;
 
 const manualNewsQueue = [];
 let editingManualNewsId = null;
@@ -1203,6 +1207,10 @@ function openRubricView(card) {
   } else {
     const clonedCard = card.cloneNode(true);
     clonedCard.classList.remove('card');
+    if (rubricType === 'ursass_tube_leaderboard') {
+      const heading = clonedCard.querySelector('h3');
+      if (heading) heading.remove();
+    }
     viewCard.appendChild(clonedCard);
   }
 
@@ -1232,10 +1240,10 @@ function syncRubricViewFrameSize() {
 function openRubricFilterOverlay(rubricType) {
   if (!rubricFilterOverlay || !['top_10_coins_gainers', 'top_10_coins_losers'].includes(rubricType)) return;
   if (rubricFilterTitle) rubricFilterTitle.textContent = rubricType === 'top_10_coins_gainers' ? 'Фильтры: Top Gainers' : 'Фильтры: Top Losers';
-  if (rubricFilterVsCurrency) rubricFilterVsCurrency.value = moversVsCurrencyInput?.value || 'usd';
-  if (rubricFilterMinCoinCap) rubricFilterMinCoinCap.value = moversMinCoinCapInput?.value || '';
-  if (rubricFilterMaxCoinCap) rubricFilterMaxCoinCap.value = moversMaxCoinCapInput?.value || '';
-  if (rubricFilterMinCoinLiquidity) rubricFilterMinCoinLiquidity.value = moversMinCoinLiquidityInput?.value || '0.01';
+  if (rubricFilterVsCurrency) rubricFilterVsCurrency.value = moversVsCurrencyField?.value || 'usd';
+  if (rubricFilterMinCoinCap) rubricFilterMinCoinCap.value = moversMinCoinCapField?.value || '';
+  if (rubricFilterMaxCoinCap) rubricFilterMaxCoinCap.value = moversMaxCoinCapField?.value || '';
+  if (rubricFilterMinCoinLiquidity) rubricFilterMinCoinLiquidity.value = moversMinCoinLiquidityField?.value || '';
   rubricFilterOverlay.classList.add('is-open');
 }
 
@@ -1244,10 +1252,10 @@ function closeRubricFilterOverlay() {
 }
 
 async function applyRubricFiltersAndRefresh(refreshAfterSave = false) {
-  if (moversVsCurrencyInput && rubricFilterVsCurrency) moversVsCurrencyInput.value = rubricFilterVsCurrency.value.trim().toLowerCase() || 'usd';
-  if (moversMinCoinCapInput && rubricFilterMinCoinCap) moversMinCoinCapInput.value = rubricFilterMinCoinCap.value;
-  if (moversMaxCoinCapInput && rubricFilterMaxCoinCap) moversMaxCoinCapInput.value = rubricFilterMaxCoinCap.value;
-  if (moversMinCoinLiquidityInput && rubricFilterMinCoinLiquidity) moversMinCoinLiquidityInput.value = rubricFilterMinCoinLiquidity.value;
+  if (moversVsCurrencyField && rubricFilterVsCurrency) moversVsCurrencyField.value = rubricFilterVsCurrency.value.trim().toLowerCase() || 'usd';
+  if (moversMinCoinCapField && rubricFilterMinCoinCap) moversMinCoinCapField.value = rubricFilterMinCoinCap.value;
+  if (moversMaxCoinCapField && rubricFilterMaxCoinCap) moversMaxCoinCapField.value = rubricFilterMaxCoinCap.value;
+  if (moversMinCoinLiquidityField && rubricFilterMinCoinLiquidity) moversMinCoinLiquidityField.value = rubricFilterMinCoinLiquidity.value;
   marketMoversController?.saveFilters();
   if (refreshAfterSave) await marketMoversController?.load();
   closeRubricFilterOverlay();
@@ -2209,11 +2217,11 @@ mouthStopButton.addEventListener('click', stopMouthPreview);
 speechModeInput.addEventListener('change', updateSpeechMode);
 marketMoversController = window.UrsasMarketMovers?.createController({
   refs: {
-    moversVsCurrencyInput,
+    moversVsCurrencyInput: moversVsCurrencyField,
     moversStockApiKeyInput,
-    moversMinCoinCapInput,
-    moversMaxCoinCapInput,
-    moversMinCoinLiquidityInput,
+    moversMinCoinCapInput: moversMinCoinCapField,
+    moversMaxCoinCapInput: moversMaxCoinCapField,
+    moversMinCoinLiquidityInput: moversMinCoinLiquidityField,
     moversMinStockCapInput,
     moversMaxStockCapInput,
     moversMinStockVolumeInput,
