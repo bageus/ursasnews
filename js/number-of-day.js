@@ -1,11 +1,63 @@
 (function attachNumberOfDay(globalScope) {
   function createController({ flipRoot, spinButton, statusNode }) {
     let spinTimerIds = [];
+    let dayRefreshTimerId = null;
     let isSpinning = false;
 
+    const CET_TIME_ZONE = 'Europe/Paris';
+
+    function getDateInCET(date = new Date()) {
+      const formatter = new Intl.DateTimeFormat('en-CA', {
+        timeZone: CET_TIME_ZONE,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      });
+      const parts = formatter.formatToParts(date);
+      const map = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+      return {
+        year: Number(map.year),
+        month: Number(map.month),
+        day: Number(map.day),
+      };
+    }
+
     function getNumberOfDayValue() {
+      return getDateInCET().day;
+    }
+
+    function getMillisecondsUntilNextCETDay() {
       const now = new Date();
-      return now.getDate();
+      const currentCETDate = getDateInCET(now);
+      const probe = new Date(now.getTime());
+      probe.setUTCDate(probe.getUTCDate() + 1);
+
+      for (let hour = 0; hour <= 30; hour += 1) {
+        for (let minute = 0; minute < 60; minute += 1) {
+          const candidate = new Date(
+            Date.UTC(
+              probe.getUTCFullYear(),
+              probe.getUTCMonth(),
+              probe.getUTCDate(),
+              hour,
+              minute,
+              0,
+              0,
+            ),
+          );
+          const candidateCETDate = getDateInCET(candidate);
+          if (
+            candidateCETDate.year !== currentCETDate.year ||
+            candidateCETDate.month !== currentCETDate.month ||
+            candidateCETDate.day !== currentCETDate.day
+          ) {
+            const diff = candidate.getTime() - now.getTime();
+            return Math.max(1_000, diff);
+          }
+        }
+      }
+
+      return 24 * 60 * 60 * 1000;
     }
 
     function setFlipDigitText(node, digit) {
@@ -72,6 +124,22 @@
       spinTimerIds = [];
     }
 
+    function scheduleDailyRefresh() {
+      if (dayRefreshTimerId) {
+        window.clearTimeout(dayRefreshTimerId);
+        dayRefreshTimerId = null;
+      }
+
+      dayRefreshTimerId = window.setTimeout(() => {
+        const nextValue = getNumberOfDayValue();
+        setFlipClockNumber(nextValue, 220);
+        if (statusNode) {
+          statusNode.textContent = `Число дня: ${String(nextValue).padStart(2, '0')} (CET)`;
+        }
+        scheduleDailyRefresh();
+      }, getMillisecondsUntilNextCETDay());
+    }
+
     function runFlip() {
       if (!flipRoot || isSpinning) return;
 
@@ -93,7 +161,7 @@
         setFlipClockNumber(nextValue, flipDuration);
 
         if (step === rounds) {
-          if (statusNode) statusNode.textContent = `Число дня: ${String(targetValue).padStart(2, '0')}`;
+          if (statusNode) statusNode.textContent = `Число дня: ${String(targetValue).padStart(2, '0')} (CET)`;
           if (spinButton) spinButton.disabled = false;
           isSpinning = false;
         }
@@ -112,7 +180,12 @@
     }
 
     function init() {
-      setFlipClockNumber(getNumberOfDayValue(), 0);
+      const initialValue = getNumberOfDayValue();
+      setFlipClockNumber(initialValue, 0);
+      if (statusNode) {
+        statusNode.textContent = `Число дня: ${String(initialValue).padStart(2, '0')} (CET)`;
+      }
+      scheduleDailyRefresh();
     }
 
     return {
