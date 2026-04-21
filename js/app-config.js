@@ -83,15 +83,15 @@
     ],
     rubricCatalog: [
       { type: 'ursas_index', title: 'Ursas Index' },
-      { type: 'number_of_day', title: 'Number of the day' },
-      { type: 'top_10_coins_gainers', title: 'Top 10 coins gainers' },
-      { type: 'top_10_coins_losers', title: 'Top 10 coins losers' },
+      { type: 'number_of_day', title: 'Daily Pick' },
+      { type: 'top_10_coins_gainers', title: 'Top Gainers' },
+      { type: 'top_10_coins_losers', title: 'Top Losers' },
       { type: 'top_10_stocks', title: 'Top 10 stocks movers' },
       { type: 'crypto_bubbles', title: 'Crypto bubbles' },
       { type: 'bear_world_news', title: 'Bear-world news' },
       { type: 'bear_language', title: 'Язык медведей' },
       { type: 'roadmap_news', title: 'Roadmap news' },
-      { type: 'ursass_tube_leaderboard', title: 'Ursass Tube leaderboard' },
+      { type: 'ursass_tube_leaderboard', title: 'Ursass Tube Leaderboard' },
     ],
     mouthSprites: {
       idle: {

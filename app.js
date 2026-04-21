@@ -85,9 +85,19 @@ const rubricEditorSave = document.getElementById('rubric-editor-save');
 const rubricEditorClose = document.getElementById('rubric-editor-close');
 const rubricViewOverlay = document.getElementById('rubric-view-overlay');
 const rubricViewContent = document.getElementById('rubric-view-content');
+const rubricViewFrame = document.getElementById('rubric-view-frame');
 const numberOfDayFlip = document.getElementById('number-of-day-flip');
 const numberOfDaySpinButton = document.getElementById('spin-number-of-day');
 const numberOfDayStatus = document.getElementById('number-of-day-status');
+const rubricFilterOverlay = document.getElementById('rubric-filter-overlay');
+const rubricFilterTitle = document.getElementById('rubric-filter-title');
+const rubricFilterClose = document.getElementById('rubric-filter-close');
+const rubricFilterVsCurrency = document.getElementById('rubric-filter-vs-currency');
+const rubricFilterMinCoinCap = document.getElementById('rubric-filter-min-coin-cap');
+const rubricFilterMaxCoinCap = document.getElementById('rubric-filter-max-coin-cap');
+const rubricFilterMinCoinLiquidity = document.getElementById('rubric-filter-min-coin-liquidity');
+const rubricFilterSave = document.getElementById('rubric-filter-save');
+const rubricFilterApply = document.getElementById('rubric-filter-apply');
 
 const manualNewsQueue = [];
 let editingManualNewsId = null;
@@ -1175,17 +1185,72 @@ function saveActiveRubricDescription() {
 
 function openRubricView(card) {
   if (!card || !rubricViewContent) return;
-  const viewCard = card.cloneNode(true);
-  viewCard.classList.remove('card');
-  viewCard.classList.add('rubric-card-preview');
+  const rubricType = card.dataset.rubricType || '';
+  const viewCard = document.createElement('div');
+  viewCard.className = 'rubric-card-preview';
+
+  if (rubricType === 'ursas_index') {
+    const titleNode = document.createElement('h3');
+    titleNode.textContent = card.dataset.rubricTitle || 'Ursas Index';
+    const score = Number(ursasIndexValue?.textContent || 50) || 50;
+    const scoreNode = document.createElement('p');
+    scoreNode.className = 'ursas-index-value';
+    scoreNode.textContent = String(score);
+    const stateNode = document.createElement('p');
+    stateNode.className = 'hint';
+    stateNode.textContent = getUrsasIndexBearState(score);
+    viewCard.append(titleNode, scoreNode, stateNode);
+  } else {
+    const clonedCard = card.cloneNode(true);
+    clonedCard.classList.remove('card');
+    viewCard.appendChild(clonedCard);
+  }
+
   rubricViewContent.innerHTML = '';
   rubricViewContent.appendChild(viewCard);
+  syncRubricViewFrameSize();
   rubricViewOverlay.classList.add('is-open');
 }
 
 function closeRubricView() {
   rubricViewContent.innerHTML = '';
+  if (rubricViewFrame) {
+    rubricViewFrame.style.width = '';
+    rubricViewFrame.style.height = '';
+  }
   rubricViewOverlay.classList.remove('is-open');
+}
+
+function syncRubricViewFrameSize() {
+  if (!rubricViewFrame || !sceneStage) return;
+  const stageRect = sceneStage.getBoundingClientRect();
+  if (!stageRect.width || !stageRect.height) return;
+  rubricViewFrame.style.width = `${Math.round(stageRect.width)}px`;
+  rubricViewFrame.style.height = `${Math.round(stageRect.height)}px`;
+}
+
+function openRubricFilterOverlay(rubricType) {
+  if (!rubricFilterOverlay || !['top_10_coins_gainers', 'top_10_coins_losers'].includes(rubricType)) return;
+  if (rubricFilterTitle) rubricFilterTitle.textContent = rubricType === 'top_10_coins_gainers' ? 'Фильтры: Top Gainers' : 'Фильтры: Top Losers';
+  if (rubricFilterVsCurrency) rubricFilterVsCurrency.value = moversVsCurrencyInput?.value || 'usd';
+  if (rubricFilterMinCoinCap) rubricFilterMinCoinCap.value = moversMinCoinCapInput?.value || '';
+  if (rubricFilterMaxCoinCap) rubricFilterMaxCoinCap.value = moversMaxCoinCapInput?.value || '';
+  if (rubricFilterMinCoinLiquidity) rubricFilterMinCoinLiquidity.value = moversMinCoinLiquidityInput?.value || '0.01';
+  rubricFilterOverlay.classList.add('is-open');
+}
+
+function closeRubricFilterOverlay() {
+  rubricFilterOverlay?.classList.remove('is-open');
+}
+
+async function applyRubricFiltersAndRefresh(refreshAfterSave = false) {
+  if (moversVsCurrencyInput && rubricFilterVsCurrency) moversVsCurrencyInput.value = rubricFilterVsCurrency.value.trim().toLowerCase() || 'usd';
+  if (moversMinCoinCapInput && rubricFilterMinCoinCap) moversMinCoinCapInput.value = rubricFilterMinCoinCap.value;
+  if (moversMaxCoinCapInput && rubricFilterMaxCoinCap) moversMaxCoinCapInput.value = rubricFilterMaxCoinCap.value;
+  if (moversMinCoinLiquidityInput && rubricFilterMinCoinLiquidity) moversMinCoinLiquidityInput.value = rubricFilterMinCoinLiquidity.value;
+  marketMoversController?.saveFilters();
+  if (refreshAfterSave) await marketMoversController?.load();
+  closeRubricFilterOverlay();
 }
 
 function setMouthFrame(type, frameIndex) {
@@ -1498,19 +1563,24 @@ function calculateUrsasIndex(newsItems = []) {
 
   const directionalTotal = totals.bear + totals.bull;
   if (directionalTotal === 0) {
-    return { score: 50, state: 'Нейтрально', ...totals };
+    return { score: 50, state: getUrsasIndexBearState(50), ...totals };
   }
 
   const directionalBias = (totals.bear - totals.bull) / directionalTotal;
   const score = Math.round(Math.min(100, Math.max(0, 50 + directionalBias * 50)));
 
-  let state = 'Нейтрально';
-  if (score >= 70) state = 'Сильный медвежий режим';
-  else if (score >= 55) state = 'Умеренно медвежий режим';
-  else if (score <= 30) state = 'Сильный бычий режим (медвежий индекс низкий)';
-  else if (score <= 45) state = 'Умеренно бычий режим (медвежий индекс низкий)';
+  return { score, state: getUrsasIndexBearState(score), ...totals };
+}
 
-  return { score, state, ...totals };
+function getUrsasIndexBearState(score) {
+  const safeScore = Number(score) || 0;
+  if (safeScore > 90) return 'Bearcalypse';
+  if (safeScore > 50) return 'Extreme Bear';
+  if (safeScore === 50) return 'Bear';
+  if (safeScore > 30) return 'Calm Bear';
+  if (safeScore > 10) return 'Still Bear';
+  if (safeScore > 2) return 'Tiny Bear';
+  return 'Invisible Bear';
 }
 
 function renderUrsasIndex() {
@@ -2176,6 +2246,8 @@ numberOfDayController = window.UrsasNumberOfDay?.createController({
 });
 
 episodeFormatInput.addEventListener('change', () => applySceneLayout(episodeFormatInput.value));
+episodeFormatInput.addEventListener('change', syncRubricViewFrameSize);
+window.addEventListener('resize', syncRubricViewFrameSize);
 addNewsItemButton.addEventListener('click', () => addSpeechNewsItem());
 addRubricButton.addEventListener('click', addSelectedRubric);
 rubricSelect.addEventListener('change', () => {
@@ -2228,6 +2300,13 @@ rubricsGrid.addEventListener('click', (event) => {
   if (event.target.closest('[data-rubric-action]')) {
     return;
   }
+  const filterButton = event.target.closest('[data-rubric-filter]');
+  if (filterButton) {
+    event.preventDefault();
+    event.stopPropagation();
+    openRubricFilterOverlay(filterButton.dataset.rubricFilter || '');
+    return;
+  }
   const editButton = event.target.closest('[data-rubric-edit]');
   if (editButton) {
     event.preventDefault();
@@ -2246,6 +2325,15 @@ document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape' && rubricViewOverlay.classList.contains('is-open')) {
     closeRubricView();
   }
+  if (event.key === 'Escape' && rubricFilterOverlay?.classList.contains('is-open')) {
+    closeRubricFilterOverlay();
+  }
+});
+rubricFilterClose?.addEventListener('click', closeRubricFilterOverlay);
+rubricFilterSave?.addEventListener('click', () => applyRubricFiltersAndRefresh(false));
+rubricFilterApply?.addEventListener('click', () => applyRubricFiltersAndRefresh(true));
+rubricFilterOverlay?.addEventListener('click', (event) => {
+  if (event.target === rubricFilterOverlay) closeRubricFilterOverlay();
 });
 
 setNeutralMouth();
