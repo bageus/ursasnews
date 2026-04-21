@@ -1550,13 +1550,49 @@ async function parseCoinDeskNegativeNewsLast24h() {
 
   try {
     const rssUrl = 'https://www.coindesk.com/arc/outboundfeeds/rss/';
-    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(rssUrl)}`;
-    const response = await fetch(proxyUrl);
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+    const proxyCandidates = [
+      {
+        label: 'allorigins',
+        buildUrl: (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+      },
+      {
+        label: 'corsproxy',
+        buildUrl: (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+      },
+    ];
+
+    let xmlText = '';
+    let lastProxyError = null;
+
+    for (const candidate of proxyCandidates) {
+      try {
+        const response = await fetch(candidate.buildUrl(rssUrl), {
+          method: 'GET',
+          headers: { Accept: 'application/rss+xml, application/xml, text/xml;q=0.9, */*;q=0.8' },
+          cache: 'no-store',
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        xmlText = await response.text();
+        if (!xmlText || !xmlText.includes('<rss')) {
+          throw new Error('Invalid RSS payload');
+        }
+
+        setCoindeskStatus(`RSS загружен через ${candidate.label}. Анализ...`);
+        lastProxyError = null;
+        break;
+      } catch (proxyError) {
+        lastProxyError = `${candidate.label}: ${proxyError.message}`;
+      }
     }
 
-    const xmlText = await response.text();
+    if (!xmlText) {
+      throw new Error(lastProxyError || 'No proxy available');
+    }
+
     const xmlDoc = new DOMParser().parseFromString(xmlText, 'application/xml');
     const parseError = xmlDoc.querySelector('parsererror');
     if (parseError) {
@@ -1606,7 +1642,8 @@ async function parseCoinDeskNegativeNewsLast24h() {
     renderUrsasIndex();
     setCoindeskStatus(added > 0 ? `Готово: добавлено ${added} негативных новостей за 24ч.` : 'За 24ч не найдено новых негативных новостей.');
   } catch (error) {
-    setCoindeskStatus('Не удалось загрузить CoinDesk RSS. Проверьте доступ к сети или CORS-прокси.', true);
+    const errorDetails = error?.message ? ` (${error.message})` : '';
+    setCoindeskStatus(`Не удалось загрузить CoinDesk RSS. Проверьте сеть / CORS-прокси${errorDetails}.`, true);
   } finally {
     coindeskParserInFlight = false;
     if (coindeskNegativeParseButton) {
