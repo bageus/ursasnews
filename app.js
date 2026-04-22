@@ -435,14 +435,52 @@ function resetBoardContent() {
   applySceneSettingsToMainStage(defaultNewsSceneSettings);
 }
 
-function setRubricOverlay(title = '', visible = false) {
+function buildRubricOverlayContent(rubricType = '', title = '') {
+  const card = rubricType ? rubricsGrid?.querySelector(`.rubric-card[data-rubric-type="${rubricType}"]`) : null;
+  const overlayCard = document.createElement('div');
+  overlayCard.className = 'rubric-card-preview';
+
+  if (card) {
+    if (rubricType === 'ursas_index') {
+      const titleNode = document.createElement('h3');
+      titleNode.textContent = card.dataset.rubricTitle || title || 'Ursas Index';
+      const score = Number(ursasIndexValue?.textContent || 50) || 50;
+      const scoreNode = document.createElement('p');
+      scoreNode.className = 'ursas-index-value';
+      scoreNode.textContent = String(score);
+      const stateNode = document.createElement('p');
+      stateNode.className = 'hint';
+      stateNode.textContent = getUrsasIndexBearState(score);
+      overlayCard.append(titleNode, scoreNode, stateNode);
+      return overlayCard;
+    }
+
+    const clonedCard = card.cloneNode(true);
+    clonedCard.classList.remove('card');
+    if (rubricType === 'ursass_tube_leaderboard') {
+      const heading = clonedCard.querySelector('h3');
+      if (heading) heading.remove();
+    }
+    overlayCard.appendChild(clonedCard);
+    return overlayCard;
+  }
+
+  overlayCard.innerHTML = `<h3>${title.trim() || 'Рубрика'}</h3>`;
+  return overlayCard;
+}
+
+function setRubricOverlay(title = '', visible = false, rubricType = '') {
   if (!sceneRubricOverlay) return;
   if (!visible || !title.trim()) {
     sceneRubricOverlay.classList.remove('is-visible');
     sceneRubricOverlay.innerHTML = '';
     return;
   }
-  sceneRubricOverlay.innerHTML = `<div>${title.trim()}</div>`;
+  sceneRubricOverlay.innerHTML = '';
+  const frame = document.createElement('div');
+  frame.className = 'scene-rubric-overlay-frame';
+  frame.appendChild(buildRubricOverlayContent(rubricType, title));
+  sceneRubricOverlay.appendChild(frame);
   sceneRubricOverlay.classList.add('is-visible');
 }
 
@@ -453,6 +491,7 @@ function scheduleBoardNewsBySpeech(totalMs) {
   const rubricItems = getSelectedRubrics()
     .map((rubric) => ({
       type: 'rubric',
+      rubricType: rubric.type || '',
       title: rubric.title || 'Рубрика',
       text: (rubric.description || '').trim(),
     }))
@@ -485,7 +524,7 @@ function scheduleBoardNewsBySpeech(totalMs) {
         applySceneSettingsToMainStage(activeSceneSettings);
       } else if (part.type === 'rubric') {
         resetBoardContent();
-        setRubricOverlay(part.title || 'Рубрика', true);
+        setRubricOverlay(part.title || 'Рубрика', true, part.rubricType || '');
       } else {
         setRubricOverlay('', false);
         resetBoardContent();

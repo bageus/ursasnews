@@ -247,19 +247,45 @@ button:hover {
   inset: 0;
   display: none;
   z-index: 6;
-  background: rgba(5, 8, 20, 0.86);
+  background: rgba(5, 8, 20, 0.6);
   color: #fff;
   align-items: center;
   justify-content: center;
-  text-align: center;
   padding: 24px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  font-size: clamp(20px, 5vw, 38px);
 }
 
 .scene-rubric-overlay.is-visible {
   display: flex;
+}
+
+.scene-rubric-overlay-frame {
+  width: min(640px, 92%);
+  height: min(92%, 1080px);
+  border-radius: 16px;
+  border: 1px solid #2f3863;
+  background: #0f1530;
+  padding: 20px;
+  overflow: hidden;
+}
+
+.scene-rubric-overlay-frame .rubric-card-preview {
+  height: 100%;
+  overflow: auto;
+}
+
+.scene-rubric-overlay-frame h3 {
+  margin-top: 0;
+}
+
+.scene-rubric-overlay-frame .rubric-card-actions,
+.scene-rubric-overlay-frame .rubric-description,
+.scene-rubric-overlay-frame button,
+.scene-rubric-overlay-frame .row-actions {
+  display: none;
+}
+
+.scene-rubric-overlay-frame #tube-lb-status {
+  display: none;
 }
 
 .scene-rubric-overlay small {
