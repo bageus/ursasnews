@@ -242,6 +242,34 @@ button:hover {
   z-index: 7;
 }
 
+.scene-rubric-overlay {
+  position: absolute;
+  inset: 0;
+  display: none;
+  z-index: 6;
+  background: rgba(5, 8, 20, 0.86);
+  color: #fff;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 24px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  font-size: clamp(20px, 5vw, 38px);
+}
+
+.scene-rubric-overlay.is-visible {
+  display: flex;
+}
+
+.scene-rubric-overlay small {
+  display: block;
+  margin-top: 8px;
+  font-size: 0.42em;
+  font-weight: 400;
+  opacity: 0.9;
+}
+
 .scene-subtitles.is-visible {
   display: block;
 }
@@ -794,6 +822,11 @@ button:hover {
 .rubric-description.is-empty {
   color: var(--muted);
   font-style: italic;
+}
+
+.rubric-description-lang {
+  margin-top: 8px;
+  max-width: 140px;
 }
 
 .number-of-day-widget {

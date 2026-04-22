@@ -26,6 +26,7 @@ const selectedRubrics = document.getElementById('selected-rubrics');
 const rubricSelect = document.getElementById('rubric-select');
 const addRubricButton = document.getElementById('add-rubric');
 const sceneSubtitles = document.getElementById('scene-subtitles');
+const sceneRubricOverlay = document.getElementById('scene-rubric-overlay');
 const sceneStage = document.getElementById('scene-stage');
 const sceneBackwallLayer = document.getElementById('scene-backwall-layer');
 const sceneTableLayer = document.getElementById('scene-table-layer');
@@ -80,7 +81,8 @@ const ursasIndexRefreshButton = document.getElementById('ursas-index-refresh');
 const ursasIndexRefreshStatus = document.getElementById('ursas-index-refresh-status');
 const rubricEditorOverlay = document.getElementById('rubric-editor-overlay');
 const rubricEditorTitle = document.getElementById('rubric-editor-title');
-const rubricEditorText = document.getElementById('rubric-editor-text');
+const rubricEditorTextRu = document.getElementById('rubric-editor-text-ru');
+const rubricEditorTextEn = document.getElementById('rubric-editor-text-en');
 const rubricEditorSave = document.getElementById('rubric-editor-save');
 const rubricEditorClose = document.getElementById('rubric-editor-close');
 const rubricViewOverlay = document.getElementById('rubric-view-overlay');
@@ -96,12 +98,14 @@ const rubricFilterVsCurrency = document.getElementById('rubric-filter-vs-currenc
 const rubricFilterMinCoinCap = document.getElementById('rubric-filter-min-coin-cap');
 const rubricFilterMaxCoinCap = document.getElementById('rubric-filter-max-coin-cap');
 const rubricFilterMinCoinLiquidity = document.getElementById('rubric-filter-min-coin-liquidity');
+const rubricFilterExcludeStable = document.getElementById('rubric-filter-exclude-stable');
 const rubricFilterSave = document.getElementById('rubric-filter-save');
 const rubricFilterApply = document.getElementById('rubric-filter-apply');
 const moversVsCurrencyField = moversVsCurrencyInput || rubricFilterVsCurrency;
 const moversMinCoinCapField = moversMinCoinCapInput || rubricFilterMinCoinCap;
 const moversMaxCoinCapField = moversMaxCoinCapInput || rubricFilterMaxCoinCap;
 const moversMinCoinLiquidityField = moversMinCoinLiquidityInput || rubricFilterMinCoinLiquidity;
+const moversExcludeStableField = document.getElementById('movers-exclude-stable') || rubricFilterExcludeStable;
 
 const manualNewsQueue = [];
 let editingManualNewsId = null;
@@ -1108,7 +1112,10 @@ function getSelectedRubrics() {
   return Array.from(links).map((link) => ({
     type: link.dataset.rubricType,
     title: link.textContent.trim(),
-    description: rubricDescriptions[link.dataset.rubricType] || '',
+    description: getRubricDescriptionByLanguage(link.dataset.rubricType),
+    description_ru: normalizeRubricDescription(rubricDescriptions[link.dataset.rubricType]).ru,
+    description_en: normalizeRubricDescription(rubricDescriptions[link.dataset.rubricType]).en,
+    description_lang: link.dataset.descriptionLang || 'ru',
     enabled: true,
   }));
 }
@@ -1137,11 +1144,13 @@ function addSelectedRubric() {
   selectedRubrics.appendChild(link);
   rubricSelect.value = '';
   addRubricButton.disabled = true;
+  renderPermanentRubricOverlay();
 }
 
 function loadRubricDescriptions() {
   try {
-    rubricDescriptions = JSON.parse(localStorage.getItem(RUBRIC_DESCRIPTIONS_KEY) || '{}') || {};
+    const raw = JSON.parse(localStorage.getItem(RUBRIC_DESCRIPTIONS_KEY) || '{}') || {};
+    rubricDescriptions = Object.fromEntries(Object.entries(raw).map(([type, value]) => [type, normalizeRubricDescription(value)]));
   } catch {
     rubricDescriptions = {};
   }
@@ -1157,10 +1166,12 @@ function renderRubricDescriptions() {
     const type = card.dataset.rubricType;
     const descriptionNode = card.querySelector('[data-rubric-description]');
     if (!descriptionNode || !type) return;
-    const text = rubricDescriptions[type] || '';
+    const text = getRubricDescriptionByLanguage(type);
     descriptionNode.textContent = text || 'Описание не задано';
     descriptionNode.classList.toggle('is-empty', !text);
+    ensureRubricLanguageControl(card, type);
   });
+  renderPermanentRubricOverlay();
 }
 
 function openRubricEditor(card) {
@@ -1169,9 +1180,11 @@ function openRubricEditor(card) {
   const title = card.dataset.rubricTitle || 'Рубрика';
   activeRubricType = type;
   rubricEditorTitle.textContent = `Описание: ${title}`;
-  rubricEditorText.value = rubricDescriptions[type] || '';
+  const description = normalizeRubricDescription(rubricDescriptions[type]);
+  rubricEditorTextRu.value = description.ru || '';
+  rubricEditorTextEn.value = description.en || '';
   rubricEditorOverlay.classList.add('is-open');
-  rubricEditorText.focus();
+  rubricEditorTextRu.focus();
 }
 
 function closeRubricEditor() {
@@ -1181,7 +1194,10 @@ function closeRubricEditor() {
 
 function saveActiveRubricDescription() {
   if (!activeRubricType) return;
-  rubricDescriptions[activeRubricType] = rubricEditorText.value.trim();
+  rubricDescriptions[activeRubricType] = {
+    ru: rubricEditorTextRu.value.trim(),
+    en: rubricEditorTextEn.value.trim(),
+  };
   saveRubricDescriptions();
   renderRubricDescriptions();
   closeRubricEditor();
@@ -1244,6 +1260,7 @@ function openRubricFilterOverlay(rubricType) {
   if (rubricFilterMinCoinCap) rubricFilterMinCoinCap.value = moversMinCoinCapField?.value || '';
   if (rubricFilterMaxCoinCap) rubricFilterMaxCoinCap.value = moversMaxCoinCapField?.value || '';
   if (rubricFilterMinCoinLiquidity) rubricFilterMinCoinLiquidity.value = moversMinCoinLiquidityField?.value || '';
+  if (rubricFilterExcludeStable) rubricFilterExcludeStable.checked = moversExcludeStableField?.checked || false;
   rubricFilterOverlay.classList.add('is-open');
 }
 
@@ -1256,9 +1273,61 @@ async function applyRubricFiltersAndRefresh(refreshAfterSave = false) {
   if (moversMinCoinCapField && rubricFilterMinCoinCap) moversMinCoinCapField.value = rubricFilterMinCoinCap.value;
   if (moversMaxCoinCapField && rubricFilterMaxCoinCap) moversMaxCoinCapField.value = rubricFilterMaxCoinCap.value;
   if (moversMinCoinLiquidityField && rubricFilterMinCoinLiquidity) moversMinCoinLiquidityField.value = rubricFilterMinCoinLiquidity.value;
+  if (moversExcludeStableField && rubricFilterExcludeStable) moversExcludeStableField.checked = rubricFilterExcludeStable.checked;
   marketMoversController?.saveFilters();
   if (refreshAfterSave) await marketMoversController?.load();
   closeRubricFilterOverlay();
+}
+
+function normalizeRubricDescription(value) {
+  if (typeof value === 'string') {
+    return { ru: value, en: '' };
+  }
+  if (value && typeof value === 'object') {
+    return {
+      ru: String(value.ru || ''),
+      en: String(value.en || ''),
+    };
+  }
+  return { ru: '', en: '' };
+}
+
+function getRubricDescriptionByLanguage(type) {
+  const normalized = normalizeRubricDescription(rubricDescriptions[type]);
+  const selectedLang = document.querySelector(`.rubric-card[data-rubric-type="${type}"] .rubric-description-lang`)?.value || 'ru';
+  return selectedLang === 'en' ? (normalized.en || normalized.ru || '') : (normalized.ru || normalized.en || '');
+}
+
+function ensureRubricLanguageControl(card, type) {
+  let languageSelect = card.querySelector('.rubric-description-lang');
+  if (!languageSelect) {
+    languageSelect = document.createElement('select');
+    languageSelect.className = 'rubric-description-lang';
+    languageSelect.innerHTML = '<option value="ru">Описание: RU</option><option value="en">Description: ENG</option>';
+    card.appendChild(languageSelect);
+    languageSelect.addEventListener('change', () => {
+      const selectedLinks = selectedRubrics.querySelectorAll(`a[data-rubric-type="${type}"]`);
+      selectedLinks.forEach((link) => {
+        link.dataset.descriptionLang = languageSelect.value;
+      });
+      renderRubricDescriptions();
+    });
+  }
+}
+
+function renderPermanentRubricOverlay() {
+  if (!sceneRubricOverlay) return;
+  const firstRubricLink = selectedRubrics.querySelector('a[data-rubric-type]');
+  if (!firstRubricLink) {
+    sceneRubricOverlay.classList.remove('is-visible');
+    sceneRubricOverlay.innerHTML = '';
+    return;
+  }
+  const rubricType = firstRubricLink.dataset.rubricType || '';
+  const rubricTitle = firstRubricLink.textContent?.trim() || 'Рубрика';
+  const description = getRubricDescriptionByLanguage(rubricType);
+  sceneRubricOverlay.innerHTML = `<div>${rubricTitle}${description ? `<small>${description}</small>` : ''}</div>`;
+  sceneRubricOverlay.classList.add('is-visible');
 }
 
 function setMouthFrame(type, frameIndex) {
@@ -2222,6 +2291,7 @@ marketMoversController = window.UrsasMarketMovers?.createController({
     moversMinCoinCapInput: moversMinCoinCapField,
     moversMaxCoinCapInput: moversMaxCoinCapField,
     moversMinCoinLiquidityInput: moversMinCoinLiquidityField,
+    moversExcludeStableInput: moversExcludeStableField,
     moversMinStockCapInput,
     moversMaxStockCapInput,
     moversMinStockVolumeInput,
