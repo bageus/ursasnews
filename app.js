@@ -548,7 +548,7 @@ function scheduleBoardNewsBySpeech(totalMs) {
 }
 
 function parseSpeechCommands(rawText) {
-  const normalized = (rawText || '').replace(/\s+/g, ' ').trim();
+  const normalized = normalizeSpeechScriptWithAutoPauses(rawText);
   if (!normalized) {
     return { cleanText: '', actions: [], pauses: [] };
   }
@@ -592,13 +592,42 @@ function parseSpeechCommands(rawText) {
   };
 }
 
-function updateSceneSubtitles(currentText = '', nextText = '', forceClear = false) {
+function normalizeSpeechScriptWithAutoPauses(rawText = '') {
+  const tokens = String(rawText || '').match(/\*[a-z_]+|\d+|[^\s]+/gi) || [];
+  if (tokens.length === 0) return '';
+
+  const result = [];
+  for (let i = 0; i < tokens.length; i += 1) {
+    const token = tokens[i];
+    result.push(token);
+
+    if (token.startsWith('*')) {
+      const command = token.slice(1).toLowerCase();
+      if (command === 'speak_pause' && Number.isFinite(Number(tokens[i + 1]))) {
+        result.push(tokens[i + 1]);
+        i += 1;
+      } else if (Number.isFinite(Number(tokens[i + 1]))) {
+        result.push(tokens[i + 1]);
+        i += 1;
+      }
+      continue;
+    }
+
+    if (!/\.$/.test(token)) continue;
+    const next = tokens[i + 1] || '';
+    if (String(next).toLowerCase() === '*speak_pause') continue;
+    result.push('*speak_pause', '50');
+  }
+
+  return result.join(' ').replace(/\s+/g, ' ').trim();
+}
+
+function updateSceneSubtitles(currentText = '', forceClear = false) {
   const subtitlesEnabled = document.getElementById('episode-subtitles').value === 'true';
   if (!subtitlesEnabled || forceClear) {
     sceneSubtitles.classList.remove('is-visible');
     sceneSubtitles.innerHTML = '';
     sceneSubtitles.dataset.current = '';
-    sceneSubtitles.dataset.next = '';
     return;
   }
 
@@ -611,9 +640,8 @@ function updateSceneSubtitles(currentText = '', nextText = '', forceClear = fals
   sceneSubtitles.style.fontSize = `${subtitleFontSize}px`;
   applySubtitlePosition();
 
-  if (!currentText && !nextText && sceneSubtitles.dataset.current) {
+  if (!currentText && sceneSubtitles.dataset.current) {
     currentText = sceneSubtitles.dataset.current;
-    nextText = sceneSubtitles.dataset.next || '';
   }
 
   if (!currentText) {
@@ -622,8 +650,7 @@ function updateSceneSubtitles(currentText = '', nextText = '', forceClear = fals
   }
 
   sceneSubtitles.dataset.current = currentText;
-  sceneSubtitles.dataset.next = nextText;
-  sceneSubtitles.innerHTML = `<div>${currentText}</div>${nextText ? `<div class="subtitle-next">${nextText}</div>` : ''}`;
+  sceneSubtitles.innerHTML = `<div>${currentText}</div>`;
   sceneSubtitles.classList.add('is-visible');
 }
 
@@ -650,7 +677,7 @@ function clearSubtitleTimers() {
 
 function showBaseSubtitlePreview() {
   const intro = document.getElementById('intro-text').value.trim();
-  updateSceneSubtitles(intro || 'Текст субтитров', '');
+  updateSceneSubtitles(intro || 'Текст субтитров');
 }
 
 function splitSentences(text) {
@@ -691,27 +718,94 @@ function splitSubtitleChunks(text, maxWords = 10) {
   return chunks;
 }
 
-function scheduleSubtitles(text, totalMs) {
+function buildSubtitleTimeline(rawText = '', maxWords = 10) {
+  const normalizedRaw = normalizeSpeechScriptWithAutoPauses(rawText);
+  const tokens = normalizedRaw.match(/\*[a-z_]+|\d+|[^\s]+/gi) || [];
+  const timeline = [];
+  let currentWords = [];
+
+  const pushCurrentWords = () => {
+    if (currentWords.length === 0) return;
+    timeline.push({ type: 'text', text: currentWords.join(' ') });
+    currentWords = [];
+  };
+
+  for (let i = 0; i < tokens.length; i += 1) {
+    const token = tokens[i];
+    if (token.startsWith('*')) {
+      const command = token.slice(1).toLowerCase();
+      if (command === 'speak_pause') {
+        const durationMs = Number(tokens[i + 1]);
+        if (Number.isFinite(durationMs) && durationMs > 0) {
+          pushCurrentWords();
+          timeline.push({ type: 'pause', duration_ms: durationMs });
+          i += 1;
+        }
+      } else if (Number.isFinite(Number(tokens[i + 1]))) {
+        i += 1;
+      }
+      continue;
+    }
+
+    const parts = token.match(/[\p{L}\p{N}-]+|[.,!?;:]/gu) || [];
+    parts.forEach((part) => {
+      const isPunctuation = /^[.,!?;:]$/.test(part);
+      if (isPunctuation) {
+        if (currentWords.length > 0) {
+          currentWords[currentWords.length - 1] = `${currentWords[currentWords.length - 1]}${part}`;
+        }
+        if (part === '.' || part === '!' || part === '?') {
+          pushCurrentWords();
+        }
+        return;
+      }
+
+      currentWords.push(part);
+      if (currentWords.length >= maxWords) {
+        pushCurrentWords();
+      }
+    });
+  }
+
+  pushCurrentWords();
+  return timeline;
+}
+
+function scheduleSubtitles(rawText, totalMs) {
   clearSubtitleTimers();
 
-  const chunks = splitSubtitleChunks(text, 10);
-  if (chunks.length === 0) {
-    updateSceneSubtitles('', '');
+  const timeline = buildSubtitleTimeline(rawText, 10);
+  const textItems = timeline.filter((item) => item.type === 'text');
+  if (textItems.length === 0) {
+    updateSceneSubtitles('', true);
     return;
   }
 
-  const wordCounts = chunks.map((chunk) => Math.max(1, getWordsCount(chunk)));
+  const fixedPauseMs = timeline
+    .filter((item) => item.type === 'pause')
+    .reduce((sum, item) => sum + item.duration_ms, 0);
+  const variableTotalMs = Math.max(500, totalMs - fixedPauseMs);
+  const wordCounts = textItems.map((item) => Math.max(1, getWordsCount(item.text)));
   const totalWords = wordCounts.reduce((sum, count) => sum + count, 0);
   let cursor = 0;
+  let textIndex = 0;
 
-  chunks.forEach((chunk, index) => {
-    const nextChunk = chunks[index + 1] || '';
+  timeline.forEach((item) => {
+    if (item.type === 'pause') {
+      const clearId = setTimeout(() => updateSceneSubtitles('', true), cursor);
+      subtitleTimerIds.push(clearId);
+      cursor += item.duration_ms;
+      return;
+    }
+
+    const text = item.text;
     const id = setTimeout(() => {
-      updateSceneSubtitles(chunk, nextChunk);
+      updateSceneSubtitles(text);
     }, cursor);
     subtitleTimerIds.push(id);
 
-    const duration = Math.max(700, Math.round((wordCounts[index] / totalWords) * totalMs));
+    const duration = Math.max(350, Math.round((wordCounts[textIndex] / totalWords) * variableTotalMs));
+    textIndex += 1;
     cursor += duration;
   });
 }
@@ -1469,7 +1563,8 @@ function pickOpenFrame(word, forceLarge = false) {
 }
 
 function buildSpeechEvents(rawText) {
-  const scriptTokens = (rawText || '').match(/\*[a-z_]+|\d+|[^\s]+/gi) || [];
+  const normalizedRaw = normalizeSpeechScriptWithAutoPauses(rawText);
+  const scriptTokens = normalizedRaw.match(/\*[a-z_]+|\d+|[^\s]+/gi) || [];
   const tokens = [];
   for (let i = 0; i < scriptTokens.length; i += 1) {
     const token = scriptTokens[i];
@@ -1584,10 +1679,10 @@ function startMouthPreview() {
   const speech = getSpeechTimelineConfig();
   if (!speech.text) {
     setNeutralMouth();
-    updateSceneSubtitles('', '', true);
+    updateSceneSubtitles('', true);
     return;
   }
-  scheduleSubtitles(speech.text, speech.total_ms);
+  scheduleSubtitles(speech.raw_text, speech.total_ms);
   scheduleBoardNewsBySpeech(speech.total_ms);
 
   const events = buildSpeechEvents(speech.raw_text);
