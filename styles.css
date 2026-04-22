@@ -280,7 +280,8 @@ button:hover {
 .scene-rubric-overlay-frame .rubric-card-actions,
 .scene-rubric-overlay-frame .rubric-description,
 .scene-rubric-overlay-frame button,
-.scene-rubric-overlay-frame .row-actions {
+.scene-rubric-overlay-frame .row-actions,
+.scene-rubric-overlay-frame .rubric-description-lang {
   display: none;
 }
 
@@ -652,9 +653,35 @@ button:hover {
   gap: 8px;
 }
 
+.selected-rubric-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
 .rubric-link {
   color: var(--accent);
   text-decoration: underline;
+}
+
+.rubric-remove-btn {
+  border: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+}
+
+.rubric-remove-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
 }
 
 .rubrics-controls {
@@ -1080,7 +1107,8 @@ button:hover {
 .rubric-view-frame .rubric-card-actions,
 .rubric-view-frame .rubric-description,
 .rubric-view-frame button,
-.rubric-view-frame .row-actions {
+.rubric-view-frame .row-actions,
+.rubric-view-frame .rubric-description-lang {
   display: none;
 }
 
