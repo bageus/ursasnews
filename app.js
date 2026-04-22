@@ -1183,13 +1183,13 @@ async function loadTubeLeaderboard() {
 }
 
 function getSelectedRubrics(language = subtitleLanguageInput?.value || 'ru') {
-  const links = selectedRubrics.querySelectorAll('a[data-rubric-type]');
-  return Array.from(links).map((link) => ({
-    type: link.dataset.rubricType,
-    title: link.textContent.trim(),
-    description: getRubricDescriptionByLanguage(link.dataset.rubricType, language),
-    description_ru: normalizeRubricDescription(rubricDescriptions[link.dataset.rubricType]).ru,
-    description_en: normalizeRubricDescription(rubricDescriptions[link.dataset.rubricType]).en,
+  const rubricItems = selectedRubrics.querySelectorAll('[data-rubric-type]');
+  return Array.from(rubricItems).map((item) => ({
+    type: item.dataset.rubricType,
+    title: (item.dataset.rubricTitle || item.querySelector('.rubric-link')?.textContent || '').trim(),
+    description: getRubricDescriptionByLanguage(item.dataset.rubricType, language),
+    description_ru: normalizeRubricDescription(rubricDescriptions[item.dataset.rubricType]).ru,
+    description_en: normalizeRubricDescription(rubricDescriptions[item.dataset.rubricType]).en,
     description_lang: language,
     enabled: true,
   }));
@@ -1210,13 +1210,28 @@ function addSelectedRubric() {
     return;
   }
 
+  const item = document.createElement('div');
+  item.className = 'selected-rubric-item';
+  item.dataset.rubricType = rubric.type;
+  item.dataset.rubricTitle = rubric.title;
+
   const link = document.createElement('a');
   link.href = '#';
   link.dataset.rubricType = rubric.type;
   link.className = 'rubric-link';
   link.textContent = rubric.title;
+  link.addEventListener('click', (event) => event.preventDefault());
 
-  selectedRubrics.appendChild(link);
+  const removeButton = document.createElement('button');
+  removeButton.type = 'button';
+  removeButton.className = 'rubric-remove-btn';
+  removeButton.dataset.removeRubric = rubric.type;
+  removeButton.setAttribute('aria-label', `Удалить рубрику ${rubric.title}`);
+  removeButton.title = `Удалить рубрику ${rubric.title}`;
+  removeButton.textContent = '✕';
+
+  item.append(link, removeButton);
+  selectedRubrics.appendChild(item);
   rubricSelect.value = '';
   addRubricButton.disabled = true;
 }
@@ -1362,9 +1377,9 @@ function ensureRubricLanguageControl(card, type) {
     languageSelect.innerHTML = '<option value="ru">Описание: RU</option><option value="en">Description: ENG</option>';
     card.appendChild(languageSelect);
     languageSelect.addEventListener('change', () => {
-      const selectedLinks = selectedRubrics.querySelectorAll(`a[data-rubric-type="${type}"]`);
-      selectedLinks.forEach((link) => {
-        link.dataset.descriptionLang = languageSelect.value;
+      const selectedItems = selectedRubrics.querySelectorAll(`[data-rubric-type="${type}"]`);
+      selectedItems.forEach((item) => {
+        item.dataset.descriptionLang = languageSelect.value;
       });
       renderRubricDescriptions();
     });
@@ -2372,6 +2387,12 @@ addNewsItemButton.addEventListener('click', () => addSpeechNewsItem());
 addRubricButton.addEventListener('click', addSelectedRubric);
 rubricSelect.addEventListener('change', () => {
   addRubricButton.disabled = !rubricSelect.value;
+});
+selectedRubrics.addEventListener('click', (event) => {
+  const removeButton = event.target.closest('[data-remove-rubric]');
+  if (!removeButton) return;
+  const rubricItem = removeButton.closest('[data-rubric-type]');
+  rubricItem?.remove();
 });
 helpButtons.forEach((button) => button.addEventListener('click', openCommandsOverlay));
 commandsClose.addEventListener('click', closeCommandsOverlay);
