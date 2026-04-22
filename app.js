@@ -31,6 +31,7 @@ const sceneStage = document.getElementById('scene-stage');
 const sceneBackwallLayer = document.getElementById('scene-backwall-layer');
 const sceneTableLayer = document.getElementById('scene-table-layer');
 const subtitleBoldInput = document.getElementById('subtitle-bold');
+const subtitleLanguageInput = document.getElementById('subtitle-language');
 const subtitleJoystick = document.getElementById('subtitle-joystick');
 const subtitlePositionReadout = document.getElementById('subtitle-position-readout');
 const boardLayer = document.getElementById('board-layer');
@@ -242,7 +243,7 @@ function collectSpeechText() {
 function collectFullSpeechText() {
   const intro = document.getElementById('intro-text').value.trim();
   const body = collectSpeechText();
-  const rubricSpeech = getSelectedRubrics()
+  const rubricSpeech = getSelectedRubrics(subtitleLanguageInput?.value || 'ru')
     .map((rubric) => (rubric.description || '').trim())
     .filter(Boolean)
     .join(' ');
@@ -435,10 +436,9 @@ function resetBoardContent() {
   applySceneSettingsToMainStage(defaultNewsSceneSettings);
 }
 
-function buildRubricOverlayContent(rubricType = '', title = '') {
-  const card = rubricType ? rubricsGrid?.querySelector(`.rubric-card[data-rubric-type="${rubricType}"]`) : null;
-  const overlayCard = document.createElement('div');
-  overlayCard.className = 'rubric-card-preview';
+function createRubricPreviewCard(card, rubricType = '', title = '') {
+  const previewCard = document.createElement('div');
+  previewCard.className = 'rubric-card-preview';
 
   if (card) {
     if (rubricType === 'ursas_index') {
@@ -451,8 +451,8 @@ function buildRubricOverlayContent(rubricType = '', title = '') {
       const stateNode = document.createElement('p');
       stateNode.className = 'hint';
       stateNode.textContent = getUrsasIndexBearState(score);
-      overlayCard.append(titleNode, scoreNode, stateNode);
-      return overlayCard;
+      previewCard.append(titleNode, scoreNode, stateNode);
+      return previewCard;
     }
 
     const clonedCard = card.cloneNode(true);
@@ -461,12 +461,17 @@ function buildRubricOverlayContent(rubricType = '', title = '') {
       const heading = clonedCard.querySelector('h3');
       if (heading) heading.remove();
     }
-    overlayCard.appendChild(clonedCard);
-    return overlayCard;
+    previewCard.appendChild(clonedCard);
+    return previewCard;
   }
 
-  overlayCard.innerHTML = `<h3>${title.trim() || 'Рубрика'}</h3>`;
-  return overlayCard;
+  previewCard.innerHTML = `<h3>${title.trim() || 'Рубрика'}</h3>`;
+  return previewCard;
+}
+
+function buildRubricOverlayContent(rubricType = '', title = '') {
+  const card = rubricType ? rubricsGrid?.querySelector(`.rubric-card[data-rubric-type="${rubricType}"]`) : null;
+  return createRubricPreviewCard(card, rubricType, title);
 }
 
 function setRubricOverlay(title = '', visible = false, rubricType = '') {
@@ -1177,15 +1182,15 @@ async function loadTubeLeaderboard() {
   }
 }
 
-function getSelectedRubrics() {
+function getSelectedRubrics(language = subtitleLanguageInput?.value || 'ru') {
   const links = selectedRubrics.querySelectorAll('a[data-rubric-type]');
   return Array.from(links).map((link) => ({
     type: link.dataset.rubricType,
     title: link.textContent.trim(),
-    description: getRubricDescriptionByLanguage(link.dataset.rubricType),
+    description: getRubricDescriptionByLanguage(link.dataset.rubricType, language),
     description_ru: normalizeRubricDescription(rubricDescriptions[link.dataset.rubricType]).ru,
     description_en: normalizeRubricDescription(rubricDescriptions[link.dataset.rubricType]).en,
-    description_lang: link.dataset.descriptionLang || 'ru',
+    description_lang: language,
     enabled: true,
   }));
 }
@@ -1274,29 +1279,7 @@ function saveActiveRubricDescription() {
 function openRubricView(card) {
   if (!card || !rubricViewContent) return;
   const rubricType = card.dataset.rubricType || '';
-  const viewCard = document.createElement('div');
-  viewCard.className = 'rubric-card-preview';
-
-  if (rubricType === 'ursas_index') {
-    const titleNode = document.createElement('h3');
-    titleNode.textContent = card.dataset.rubricTitle || 'Ursas Index';
-    const score = Number(ursasIndexValue?.textContent || 50) || 50;
-    const scoreNode = document.createElement('p');
-    scoreNode.className = 'ursas-index-value';
-    scoreNode.textContent = String(score);
-    const stateNode = document.createElement('p');
-    stateNode.className = 'hint';
-    stateNode.textContent = getUrsasIndexBearState(score);
-    viewCard.append(titleNode, scoreNode, stateNode);
-  } else {
-    const clonedCard = card.cloneNode(true);
-    clonedCard.classList.remove('card');
-    if (rubricType === 'ursass_tube_leaderboard') {
-      const heading = clonedCard.querySelector('h3');
-      if (heading) heading.remove();
-    }
-    viewCard.appendChild(clonedCard);
-  }
+  const viewCard = createRubricPreviewCard(card, rubricType, card.dataset.rubricTitle || 'Рубрика');
 
   rubricViewContent.innerHTML = '';
   rubricViewContent.appendChild(viewCard);
@@ -1360,10 +1343,15 @@ function normalizeRubricDescription(value) {
   return { ru: '', en: '' };
 }
 
-function getRubricDescriptionByLanguage(type) {
+function mapSubtitleLanguageToRubricLanguage(language = 'ru') {
+  return language === 'ru' ? 'ru' : 'en';
+}
+
+function getRubricDescriptionByLanguage(type, language = null) {
   const normalized = normalizeRubricDescription(rubricDescriptions[type]);
-  const selectedLang = document.querySelector(`.rubric-card[data-rubric-type="${type}"] .rubric-description-lang`)?.value || 'ru';
-  return selectedLang === 'en' ? (normalized.en || normalized.ru || '') : (normalized.ru || normalized.en || '');
+  const requestedLanguage = language || document.querySelector(`.rubric-card[data-rubric-type="${type}"] .rubric-description-lang`)?.value || 'ru';
+  const mappedLanguage = mapSubtitleLanguageToRubricLanguage(requestedLanguage);
+  return mappedLanguage === 'en' ? (normalized.en || normalized.ru || '') : (normalized.ru || normalized.en || '');
 }
 
 function ensureRubricLanguageControl(card, type) {
@@ -2224,7 +2212,7 @@ function buildEpisodeScript(mode = 'preview') {
   const outro = document.getElementById('outro-text').value.trim();
   const speechTimeline = getSpeechTimelineConfig();
   const speechNews = collectSpeechNewsItems();
-  const rubrics = getSelectedRubrics();
+  const rubrics = getSelectedRubrics(subtitleLanguage);
 
   const script = {
     episode_title: episodeTitle || 'Ursas Daily',
