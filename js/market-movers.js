@@ -1,5 +1,6 @@
 (function attachMarketMovers(globalScope) {
   const MARKET_MOVERS_FILTERS_KEY = 'ursasnews_market_movers_filters_v1';
+  const STABLECOIN_SYMBOLS = new Set(['USDT', 'USDC', 'DAI', 'TUSD', 'FDUSD', 'USDE', 'PYUSD', 'USDS', 'BUSD', 'USDP', 'LUSD', 'GUSD']);
 
   function toNumberOrNull(value) {
     const parsed = Number(value);
@@ -65,6 +66,7 @@
       minCoinCap: null,
       maxCoinCap: null,
       minCoinLiquidity: 0,
+      excludeStableCoins: false,
       minStockCap: null,
       maxStockCap: null,
       minStockVolume: 0,
@@ -75,6 +77,7 @@
       moversMinCoinCapInput,
       moversMaxCoinCapInput,
       moversMinCoinLiquidityInput,
+      moversExcludeStableInput,
       moversMinStockCapInput,
       moversMaxStockCapInput,
       moversMinStockVolumeInput,
@@ -98,6 +101,7 @@
         minCoinCap: toNumberOrNull(moversMinCoinCapInput?.value) ?? cachedFilters.minCoinCap,
         maxCoinCap: toNumberOrNull(moversMaxCoinCapInput?.value) ?? cachedFilters.maxCoinCap,
         minCoinLiquidity: Math.max(0, toNumberOrNull(moversMinCoinLiquidityInput?.value) ?? cachedFilters.minCoinLiquidity ?? 0),
+        excludeStableCoins: Boolean(moversExcludeStableInput?.checked ?? cachedFilters.excludeStableCoins),
         minStockCap: toNumberOrNull(moversMinStockCapInput?.value) ?? cachedFilters.minStockCap,
         maxStockCap: toNumberOrNull(moversMaxStockCapInput?.value) ?? cachedFilters.maxStockCap,
         minStockVolume: Math.max(0, toNumberOrNull(moversMinStockVolumeInput?.value) ?? cachedFilters.minStockVolume ?? 0),
@@ -114,6 +118,7 @@
       if (moversMinCoinCapInput) moversMinCoinCapInput.value = Number.isFinite(cachedFilters.minCoinCap) ? cachedFilters.minCoinCap : '';
       if (moversMaxCoinCapInput) moversMaxCoinCapInput.value = Number.isFinite(cachedFilters.maxCoinCap) ? cachedFilters.maxCoinCap : '';
       if (moversMinCoinLiquidityInput) moversMinCoinLiquidityInput.value = Number.isFinite(cachedFilters.minCoinLiquidity) ? cachedFilters.minCoinLiquidity : '';
+      if (moversExcludeStableInput) moversExcludeStableInput.checked = Boolean(cachedFilters.excludeStableCoins);
       if (moversMinStockCapInput) moversMinStockCapInput.value = Number.isFinite(cachedFilters.minStockCap) ? cachedFilters.minStockCap : '';
       if (moversMaxStockCapInput) moversMaxStockCapInput.value = Number.isFinite(cachedFilters.maxStockCap) ? cachedFilters.maxStockCap : '';
       if (moversMinStockVolumeInput) moversMinStockVolumeInput.value = Number.isFinite(cachedFilters.minStockVolume) ? cachedFilters.minStockVolume : '';
@@ -206,6 +211,12 @@
         if (Number.isFinite(minCoinLiquidity) && minCoinLiquidity > 0) {
           if (minCoinLiquidity > 1 && volume < minCoinLiquidity) return false;
           if (minCoinLiquidity <= 1 && liquidity < minCoinLiquidity) return false;
+        }
+        if (filters.excludeStableCoins) {
+          const symbol = String(coin.symbol || '').toUpperCase();
+          const name = String(coin.name || '').toLowerCase();
+          const looksStableByName = /\bstable\b|\busd\b|\bdollar\b/.test(name);
+          if (STABLECOIN_SYMBOLS.has(symbol) || looksStableByName) return false;
         }
         return Number.isFinite(parseCoinChangePercent(coin));
       });
