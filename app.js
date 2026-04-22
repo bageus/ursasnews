@@ -242,8 +242,12 @@ function collectSpeechText() {
 function collectFullSpeechText() {
   const intro = document.getElementById('intro-text').value.trim();
   const body = collectSpeechText();
+  const rubricSpeech = getSelectedRubrics()
+    .map((rubric) => (rubric.description || '').trim())
+    .filter(Boolean)
+    .join(' ');
   const outro = document.getElementById('outro-text').value.trim();
-  return [intro, body, outro].filter(Boolean).join(' ');
+  return [intro, body, rubricSpeech, outro].filter(Boolean).join(' ');
 }
 
 function applySubtitlePosition() {
@@ -431,13 +435,32 @@ function resetBoardContent() {
   applySceneSettingsToMainStage(defaultNewsSceneSettings);
 }
 
+function setRubricOverlay(title = '', visible = false) {
+  if (!sceneRubricOverlay) return;
+  if (!visible || !title.trim()) {
+    sceneRubricOverlay.classList.remove('is-visible');
+    sceneRubricOverlay.innerHTML = '';
+    return;
+  }
+  sceneRubricOverlay.innerHTML = `<div>${title.trim()}</div>`;
+  sceneRubricOverlay.classList.add('is-visible');
+}
+
 function scheduleBoardNewsBySpeech(totalMs) {
   const intro = document.getElementById('intro-text').value.trim();
   const outro = document.getElementById('outro-text').value.trim();
   const newsItems = collectSpeechNewsItems();
+  const rubricItems = getSelectedRubrics()
+    .map((rubric) => ({
+      type: 'rubric',
+      title: rubric.title || 'Рубрика',
+      text: (rubric.description || '').trim(),
+    }))
+    .filter((rubric) => rubric.text.length > 0);
   const parts = [
     { type: 'intro', text: intro },
     ...newsItems.map((item) => ({ type: 'news', ...item })),
+    ...rubricItems,
     { type: 'outro', text: outro },
   ].filter((part) => (part.text || '').trim().length > 0);
 
@@ -455,11 +478,16 @@ function scheduleBoardNewsBySpeech(totalMs) {
 
     const startTimer = setTimeout(() => {
       if (part.type === 'news') {
+        setRubricOverlay('', false);
         const approvedFrame = Array.isArray(part.scene_frames) ? part.scene_frames[part.approved_scene_index] : null;
         const activeSceneSettings = approvedFrame?.settings || part.scene_settings || defaultNewsSceneSettings;
         setBoardContent(part.title || 'URSAS NEWS', part.image_data || '', true);
         applySceneSettingsToMainStage(activeSceneSettings);
+      } else if (part.type === 'rubric') {
+        resetBoardContent();
+        setRubricOverlay(part.title || 'Рубрика', true);
       } else {
+        setRubricOverlay('', false);
         resetBoardContent();
       }
     }, cursor);
@@ -468,7 +496,10 @@ function scheduleBoardNewsBySpeech(totalMs) {
     cursor += duration;
   });
 
-  const finishTimer = setTimeout(resetBoardContent, cursor + 50);
+  const finishTimer = setTimeout(() => {
+    setRubricOverlay('', false);
+    resetBoardContent();
+  }, cursor + 50);
   mouthPreviewTimerIds.push(finishTimer);
 }
 
@@ -1144,7 +1175,6 @@ function addSelectedRubric() {
   selectedRubrics.appendChild(link);
   rubricSelect.value = '';
   addRubricButton.disabled = true;
-  renderPermanentRubricOverlay();
 }
 
 function loadRubricDescriptions() {
@@ -1171,7 +1201,6 @@ function renderRubricDescriptions() {
     descriptionNode.classList.toggle('is-empty', !text);
     ensureRubricLanguageControl(card, type);
   });
-  renderPermanentRubricOverlay();
 }
 
 function openRubricEditor(card) {
@@ -1313,21 +1342,6 @@ function ensureRubricLanguageControl(card, type) {
       renderRubricDescriptions();
     });
   }
-}
-
-function renderPermanentRubricOverlay() {
-  if (!sceneRubricOverlay) return;
-  const firstRubricLink = selectedRubrics.querySelector('a[data-rubric-type]');
-  if (!firstRubricLink) {
-    sceneRubricOverlay.classList.remove('is-visible');
-    sceneRubricOverlay.innerHTML = '';
-    return;
-  }
-  const rubricType = firstRubricLink.dataset.rubricType || '';
-  const rubricTitle = firstRubricLink.textContent?.trim() || 'Рубрика';
-  const description = getRubricDescriptionByLanguage(rubricType);
-  sceneRubricOverlay.innerHTML = `<div>${rubricTitle}${description ? `<small>${description}</small>` : ''}</div>`;
-  sceneRubricOverlay.classList.add('is-visible');
 }
 
 function setMouthFrame(type, frameIndex) {
@@ -1516,6 +1530,7 @@ function stopMouthPreview() {
   mouthPreviewTimerIds = [];
   clearSubtitleTimers();
   setNeutralMouth();
+  setRubricOverlay('', false);
   setBoardBack();
   resetBoardContent();
   showBaseSubtitlePreview();
