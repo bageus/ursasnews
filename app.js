@@ -1282,8 +1282,6 @@ function getSelectedRubrics(language = subtitleLanguageInput?.value || 'ru') {
     type: item.dataset.rubricType,
     title: (item.dataset.rubricTitle || item.querySelector('.rubric-link')?.textContent || '').trim(),
     description: getRubricDescriptionByLanguage(item.dataset.rubricType, language),
-    description_ru: normalizeRubricDescription(rubricDescriptions[item.dataset.rubricType]).ru,
-    description_en: normalizeRubricDescription(rubricDescriptions[item.dataset.rubricType]).en,
     description_lang: language,
     enabled: true,
   }));
