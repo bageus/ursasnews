@@ -2367,7 +2367,7 @@ function buildEpisodeScript(mode = 'preview') {
               asset_path: commandAssetMap[approvedFrame.type || ''] || '',
             }
           : null,
-        scene_keyframes: (mode === 'final' && approvedFrame ? [approvedFrame] : (item.scene_frames || [])).map((frame) => ({
+        scene_keyframes: (item.scene_frames || []).map((frame) => ({
           at_ms: frame.atMs || 0,
           type: frame.type || 'start',
           duration_ms: frame.duration_ms || 0,
