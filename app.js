@@ -168,6 +168,7 @@ const defaultNewsSceneSettings = appConfig.defaultNewsSceneSettings || {
 const commandHelpItems = appConfig.commandHelpItems || [];
 const rubricCatalog = appConfig.rubricCatalog || [];
 const mouthSprites = appConfig.mouthSprites || {};
+const commandAssetMap = appConfig.commandAssetMap || {};
 
 const TUBE_BACKEND_URL = 'https://api.ursasstube.fun';
 const COINGECKO_API_URL = 'https://api.coingecko.com/api/v3';
@@ -2363,6 +2364,7 @@ function buildEpisodeScript(mode = 'preview') {
               at_ms: approvedFrame.atMs || 0,
               type: approvedFrame.type || 'start',
               settings: approvedFrame.settings || { ...defaultNewsSceneSettings },
+              asset_path: commandAssetMap[approvedFrame.type || ''] || '',
             }
           : null,
         scene_keyframes: (mode === 'final' && approvedFrame ? [approvedFrame] : (item.scene_frames || [])).map((frame) => ({
@@ -2370,9 +2372,11 @@ function buildEpisodeScript(mode = 'preview') {
           type: frame.type || 'start',
           duration_ms: frame.duration_ms || 0,
           settings: frame.settings || { ...defaultNewsSceneSettings },
+          asset_path: commandAssetMap[frame.type || ''] || '',
         })),
       };
     }),
+    scene_animation_assets: commandAssetMap,
     segments: manualNewsQueue.map((news, idx) => ({
       order: idx + 1,
       type: 'news',
