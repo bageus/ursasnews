@@ -126,6 +126,7 @@ let numberOfDayController = null;
 let providerParserInFlight = false;
 let ursasIndexRefreshInFlight = false;
 const characterLayerResetTimers = { head: null, leftArm: null, rightArm: null };
+let mouthCommandOffsetX = 0;
 
 const providerNegativeParsers = {
   coindesk: {
@@ -705,6 +706,17 @@ function setCharacterLayerToBase(target = '') {
   if (baseSrc) {
     layer.src = baseSrc;
   }
+  if (target === 'head') {
+    mouthCommandOffsetX = 0;
+  }
+}
+
+function getMouthCommandOffsetXByCommand(command = '') {
+  if (command === 'right_turn_head_low') return -10;
+  if (command === 'left_turn_head_mid') return 5;
+  if (command === 'right_turn_head_high') return -20;
+  if (command === 'left_tilt_head_low') return -2;
+  return 0;
 }
 
 function applyCharacterCommand(command = '', durationMs = 0) {
@@ -726,6 +738,10 @@ function applyCharacterCommand(command = '', durationMs = 0) {
   if (characterLayerResetTimers[target]) {
     clearTimeout(characterLayerResetTimers[target]);
     characterLayerResetTimers[target] = null;
+  }
+
+  if (target === 'head') {
+    mouthCommandOffsetX = getMouthCommandOffsetXByCommand(command);
   }
 
   if (durationMs > 0) {
@@ -1550,8 +1566,8 @@ function setMouthFrame(type, frameIndex) {
 
   mouthLayer.style.backgroundImage = `url("${spritePath}")`;
   mouthLayer.style.backgroundPosition = `${-100 * boundedFrame}px 0`;
-  mouthLayer.style.left = `calc(50% + ${sprite.offset_x}px)`;
-  mouthLayer.style.top = `calc(49% + ${sprite.offset_y}px)`;
+  mouthLayer.style.left = `calc(50% + ${sprite.offset_x + mouthCommandOffsetX}px)`;
+  mouthLayer.style.top = `calc(49% + ${sprite.offset_y - 4}px)`;
   mouthLayer.style.transform = `translate(-50%, -50%) scale(${sprite.scale})`;
 }
 
