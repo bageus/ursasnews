@@ -30,6 +30,9 @@ const sceneRubricOverlay = document.getElementById('scene-rubric-overlay');
 const sceneStage = document.getElementById('scene-stage');
 const sceneBackwallLayer = document.getElementById('scene-backwall-layer');
 const sceneTableLayer = document.getElementById('scene-table-layer');
+const sceneHeadLayer = document.getElementById('scene-head-layer');
+const sceneLeftArmLayer = document.getElementById('scene-left-arm-layer');
+const sceneRightArmLayer = document.getElementById('scene-right-arm-layer');
 const subtitleBoldInput = document.getElementById('subtitle-bold');
 const subtitleLanguageInput = document.getElementById('subtitle-language');
 const subtitleJoystick = document.getElementById('subtitle-joystick');
@@ -122,6 +125,7 @@ let marketMoversController = null;
 let numberOfDayController = null;
 let providerParserInFlight = false;
 let ursasIndexRefreshInFlight = false;
+const characterLayerResetTimers = { head: null, leftArm: null, rightArm: null };
 
 const providerNegativeParsers = {
   coindesk: {
@@ -674,6 +678,63 @@ function setBoardBack() {
 function clearSubtitleTimers() {
   subtitleTimerIds.forEach((id) => clearTimeout(id));
   subtitleTimerIds = [];
+}
+
+function getCharacterLayerTarget(command = '') {
+  if (command.startsWith('left_arm_')) return 'leftArm';
+  if (command.startsWith('right_arm_')) return 'rightArm';
+  if (command.includes('head')) return 'head';
+  return '';
+}
+
+function getCharacterLayerNode(target = '') {
+  if (target === 'head') return sceneHeadLayer;
+  if (target === 'leftArm') return sceneLeftArmLayer;
+  if (target === 'rightArm') return sceneRightArmLayer;
+  return null;
+}
+
+function setCharacterLayerToBase(target = '') {
+  const layer = getCharacterLayerNode(target);
+  if (!layer) return;
+  if (characterLayerResetTimers[target]) {
+    clearTimeout(characterLayerResetTimers[target]);
+    characterLayerResetTimers[target] = null;
+  }
+  const baseSrc = layer.dataset.baseSrc || '';
+  if (baseSrc) {
+    layer.src = baseSrc;
+  }
+}
+
+function applyCharacterCommand(command = '', durationMs = 0) {
+  const target = getCharacterLayerTarget(command);
+  if (!target) return false;
+  const layer = getCharacterLayerNode(target);
+  if (!layer) return false;
+
+  const assetPath = commandAssetMap[command] || '';
+  if (assetPath) {
+    layer.src = assetPath;
+  } else if (command.endsWith('_base')) {
+    setCharacterLayerToBase(target);
+    return true;
+  } else {
+    return false;
+  }
+
+  if (characterLayerResetTimers[target]) {
+    clearTimeout(characterLayerResetTimers[target]);
+    characterLayerResetTimers[target] = null;
+  }
+
+  if (durationMs > 0) {
+    const timerId = setTimeout(() => setCharacterLayerToBase(target), durationMs);
+    characterLayerResetTimers[target] = timerId;
+    mouthPreviewTimerIds.push(timerId);
+  }
+
+  return true;
 }
 
 function showBaseSubtitlePreview() {
@@ -1665,6 +1726,9 @@ function stopMouthPreview() {
   mouthPreviewTimerIds.forEach((id) => clearTimeout(id));
   mouthPreviewTimerIds = [];
   clearSubtitleTimers();
+  setCharacterLayerToBase('head');
+  setCharacterLayerToBase('leftArm');
+  setCharacterLayerToBase('rightArm');
   setNeutralMouth();
   setRubricOverlay('', false);
   setBoardBack();
@@ -1721,6 +1785,7 @@ function startMouthPreview() {
         if (event.command === 'board_news_back') {
           setBoardBack();
         }
+        applyCharacterCommand(event.command, event.duration_ms);
       }
     }, cursor);
     mouthPreviewTimerIds.push(id);
@@ -2575,6 +2640,9 @@ rubricFilterOverlay?.addEventListener('click', (event) => {
 });
 
 setNeutralMouth();
+if (sceneHeadLayer && !sceneHeadLayer.dataset.baseSrc) sceneHeadLayer.dataset.baseSrc = sceneHeadLayer.src;
+if (sceneLeftArmLayer && !sceneLeftArmLayer.dataset.baseSrc) sceneLeftArmLayer.dataset.baseSrc = sceneLeftArmLayer.src;
+if (sceneRightArmLayer && !sceneRightArmLayer.dataset.baseSrc) sceneRightArmLayer.dataset.baseSrc = sceneRightArmLayer.src;
 updateSpeechMode();
 applySceneLayout(episodeFormatInput.value);
 addSpeechNewsItem();
